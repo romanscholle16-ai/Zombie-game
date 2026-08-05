@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+<title>ROTGRID — Round Based Survival</title>
+<link rel="stylesheet" href="./styles/main.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>&#129503;</text></svg>" />
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/three.module.js",
+    "three/": "./vendor/three/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="app">
+  <canvas id="gl"></canvas>
+
+  <!-- ============================ HUD ============================ -->
+  <div id="hud" class="layer hidden">
+    <div class="hud-corner hud-tl">
+      <div class="round-block">
+        <div class="round-label">ROUND</div>
+        <div class="round-number" id="hud-round">1</div>
+      </div>
+      <div class="zombies-left"><span id="hud-zleft">0</span> HOSTILES</div>
+    </div>
+
+    <div class="hud-corner hud-tr">
+      <div class="score-panel">
+        <div class="score-name" id="hud-name">OPERATOR</div>
+        <div class="score-points" id="hud-points">500</div>
+        <div class="score-sub">POINTS</div>
+        <div class="score-time" id="hud-time">00:00</div>
+      </div>
+    </div>
+
+    <div class="hud-corner hud-bl">
+      <div class="perk-row" id="hud-perks"></div>
+      <div class="vitals">
+        <div class="armor-bar"><div class="armor-fill" id="hud-armor-fill"></div></div>
+        <div class="health-bar"><div class="health-fill" id="hud-health-fill"></div></div>
+      </div>
+    </div>
+
+    <div class="hud-corner hud-br">
+      <div class="weapon-panel">
+        <div class="weapon-name" id="hud-weapon">SIDEARM MK1</div>
+        <div class="ammo-line">
+          <span class="ammo-mag" id="hud-mag">8</span>
+          <span class="ammo-sep">/</span>
+          <span class="ammo-res" id="hud-res">80</span>
+        </div>
+        <div class="weapon-alt" id="hud-weapon-alt"></div>
+      </div>
+    </div>
+
+    <div class="center-stack">
+      <div id="crosshair" class="crosshair">
+        <span class="ch t"></span><span class="ch b"></span><span class="ch l"></span><span class="ch r"></span>
+        <span class="ch dot"></span>
+      </div>
+      <div id="hitmarker" class="hitmarker"><span></span><span></span><span></span><span></span></div>
+      <div id="prompt" class="prompt hidden"></div>
+      <div id="toast-stack" class="toast-stack"></div>
+    </div>
+
+    <div id="damage-vignette" class="damage-vignette"></div>
+    <div id="dir-indicators" class="dir-indicators"></div>
+    <div id="low-health-pulse" class="low-health-pulse"></div>
+    <div id="round-banner" class="round-banner"><div class="rb-text">ROUND 1</div><div class="rb-bar"></div></div>
+    <div id="powerup-tray" class="powerup-tray"></div>
+    <div id="downed-overlay" class="downed-overlay hidden">
+      <div class="downed-title">YOU ARE DOWN</div>
+      <div class="downed-sub">BLEEDING OUT</div>
+      <div class="bleed-bar"><div class="bleed-fill" id="bleed-fill"></div></div>
+    </div>
+  </div>
+
+  <!-- ============================ MENUS ============================ -->
+  <div id="menu-root" class="layer"></div>
+  <div id="fade" class="fade"></div>
+  <div id="loading" class="loading"><div class="loading-inner"><div class="loading-title">ROTGRID</div><div class="loading-bar"><i></i></div><div class="loading-tip">Generating facility…</div></div></div>
+</div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
