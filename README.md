@@ -32,11 +32,19 @@ Then open <http://localhost:8080/>.
 
 Click the canvas to lock the mouse. `ESC` pauses.
 
+### One self-contained file
+
+`npm run build:single` bundles the whole game — three.js, every module, all CSS —
+into `dist/rotgrid.html`. That file needs no server and no assets; open it
+directly or host it anywhere. Requires `npx esbuild` (or set `ESBUILD` to a
+binary you already have).
+
 ### Controls
 
 | Action | Key |
 | --- | --- |
 | Move | `W` `A` `S` `D` |
+| Look | Mouse (or arrow keys where pointer lock is unavailable) |
 | Sprint | `Left Shift` |
 | Crouch / Slide | `Left Ctrl` (slide = sprint + crouch) |
 | Jump / Mantle | `Space` (aim at a crate and jump to pull up) |

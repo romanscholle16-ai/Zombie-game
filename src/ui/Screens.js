@@ -146,7 +146,7 @@ export class ScreenManager {
         el('span', { html: `HIGHEST ROUND <b>${s.highestRound}</b>` }),
         el('span', { html: `LIFETIME KILLS <b>${formatNumber(s.lifetimeKills)}</b>` }),
         el('span', { html: `RUNS <b>${s.gamesPlayed}</b>` }),
-        el('span', { html: 'MOVE <b>WASD</b> · FIRE <b>LMB</b> · USE <b>F</b>' })));
+        el('span', { html: 'MOVE <b>WASD</b> · LOOK <b>MOUSE</b> or <b>ARROWS</b> · FIRE <b>LMB</b> · USE <b>F</b>' })));
   }
 
   // ---------------------------------------------------------------- solo

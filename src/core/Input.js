@@ -171,6 +171,14 @@ class InputManager extends Emitter {
     yaw += -curve(this.pad.rx) * cs * dt;
     pitch += -curve(this.pad.ry) * cs * dt * inv;
 
+    // Arrow keys always steer, so the game stays playable anywhere pointer
+    // lock is unavailable (embedded frames, restricted browsers).
+    const ARROW = 2.2 * dt;
+    if (this.down.has('ArrowLeft')) yaw += ARROW;
+    if (this.down.has('ArrowRight')) yaw -= ARROW;
+    if (this.down.has('ArrowUp')) pitch += ARROW * inv;
+    if (this.down.has('ArrowDown')) pitch -= ARROW * inv;
+
     this.mouseDX = 0;
     this.mouseDY = 0;
     return { yaw, pitch };
