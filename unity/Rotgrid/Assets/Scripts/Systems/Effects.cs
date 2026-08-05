@@ -40,8 +40,8 @@ namespace Rotgrid
         Transform _camera;
 
         // Tracers
-        class Tracer { public LineRenderer line; public float t; }
-        readonly List<Tracer> _tracers = new List<Tracer>();
+        class TracerLine { public LineRenderer line; public float t; }
+        readonly List<TracerLine> _tracers = new List<TracerLine>();
 
         // Decals
         class Decal { public GameObject go; public float t; public Material mat; }
@@ -91,7 +91,7 @@ namespace Rotgrid
                 lr.material = ParticleMaterial(true);
                 lr.useWorldSpace = true;
                 go.SetActive(false);
-                _tracers.Add(new Tracer { line = lr });
+                _tracers.Add(new TracerLine { line = lr });
             }
 
             for (int i = 0; i < 32; i++)

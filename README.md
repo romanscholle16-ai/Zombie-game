@@ -65,16 +65,21 @@ separate controller sensitivity slider in Settings. Every key is rebindable.
 ## Running the Unity build
 
 Open `unity/Rotgrid/` as a project in **Unity 2021.3 LTS or newer** and press
-Play on `Assets/Scenes/Boot.unity`.
+**Play**. That is the whole setup.
 
-If the scene does not open automatically, either open it from the Project
-window, or use the menu item **Rotgrid ▸ Create Play Scene**, which builds a
-fresh scene containing the single bootstrap object the game needs.
+There is nothing to wire up in the inspector: a `[RuntimeInitializeOnLoadMethod]`
+hook spawns the game the moment play starts, in whatever scene happens to be
+open — including a completely empty one. `Assets/Scenes/Boot.unity` is provided
+for tidiness, and the menu item **Rotgrid ▸ Create Play Scene** will regenerate
+it if you ever need to.
 
 The Unity build targets the **Built-in Render Pipeline** and falls back to URP
 shaders automatically if the project is set up that way. It uses the legacy
 Input Manager (no packages required) and IMGUI for its menus and HUD, so it runs
-on a stock Unity install with nothing else imported.
+on a stock Unity install with nothing else imported. Movement and world
+collision are hand-rolled against an AABB list rather than Unity physics, so it
+behaves identically to the browser build; only weapon raycasts use `Physics`,
+against colliders on the zombie limbs.
 
 ### Type-checking without Unity
 
@@ -84,9 +89,7 @@ With Mono or .NET installed you can type-check every gameplay script without
 opening the editor:
 
 ```bash
-mcs -target:library -out:/tmp/rotgrid.dll \
-    $(find unity/Rotgrid/Assets/Scripts -name '*.cs') \
-    unity/compile-check/UnityStubs.cs
+unity/compile-check/check.sh      # needs mcs (mono-mcs) or set CSC=csc
 ```
 
 ---

@@ -86,6 +86,8 @@ namespace UnityEngine
         public static Quaternion LookRotation(Vector3 f) { return identity; }
         public static Quaternion LookRotation(Vector3 f, Vector3 u) { return identity; }
         public static Quaternion Slerp(Quaternion a, Quaternion b, float t) { return a; }
+        public static Quaternion Lerp(Quaternion a, Quaternion b, float t) { return a; }
+        public static float Angle(Quaternion a, Quaternion b) { return 0f; }
         public static Vector3 operator *(Quaternion q, Vector3 v) { return v; }
         public static Quaternion operator *(Quaternion a, Quaternion b) { return a; }
     }
@@ -314,6 +316,14 @@ namespace UnityEngine
     }
 
     public class MeshRenderer : Renderer { }
+
+    public class LineRenderer : Renderer
+    {
+        public int positionCount { get; set; }
+        public float widthMultiplier { get; set; }
+        public bool useWorldSpace { get; set; }
+        public void SetPosition(int i, Vector3 p) { }
+    }
     public class MeshFilter : Component { public Mesh mesh { get; set; } public Mesh sharedMesh { get; set; } }
 
     public class Mesh : Object
@@ -322,6 +332,7 @@ namespace UnityEngine
         public int[] triangles { get; set; }
         public Vector3[] normals { get; set; }
         public Vector2[] uv { get; set; }
+        public Color[] colors { get; set; }
         public Bounds bounds { get; set; }
         public void RecalculateNormals() { }
         public void RecalculateBounds() { }
@@ -732,4 +743,13 @@ namespace UnityEngine
 
     [AttributeUsage(AttributeTargets.Field)]
     public class TooltipAttribute : Attribute { public TooltipAttribute(string s) { } }
+
+    public enum RuntimeInitializeLoadType { AfterSceneLoad, BeforeSceneLoad, BeforeSplashScreen, SubsystemRegistration }
+
+    [AttributeUsage(AttributeTargets.Method)]
+    public class RuntimeInitializeOnLoadMethodAttribute : Attribute
+    {
+        public RuntimeInitializeOnLoadMethodAttribute() { }
+        public RuntimeInitializeOnLoadMethodAttribute(RuntimeInitializeLoadType t) { }
+    }
 }
