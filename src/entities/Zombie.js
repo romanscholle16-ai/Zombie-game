@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Tex, mat } from '../world/Textures.js';
+import { Assets } from '../world/AssetLibrary.js';
 import { box } from '../world/Props.js';
 import { Audio } from '../core/AudioEngine.js';
 import { clamp, rand, randInt, wrapAngle, lerp } from '../core/Util.js';
@@ -29,6 +30,15 @@ const STATE = {
   IDLE: 0, BREACH: 1, VAULT: 2, CHASE: 3, ATTACK: 4, STAGGER: 5, DYING: 6, DEAD: 7,
 };
 
+/**
+ * Hitboxes sit inside an external zombie mesh and must still be hit by
+ * raycasts, so they are drawn — as nothing. `colorWrite: false` keeps them out
+ * of the frame while leaving them fully present to the raycaster.
+ */
+const INVISIBLE_HITBOX = new THREE.MeshBasicMaterial({
+  colorWrite: false, depthWrite: false, depthTest: false,
+});
+
 let UID = 0;
 
 export class Zombie {
@@ -49,6 +59,43 @@ export class Zombie {
     this.crawler = false;
 
     this._build();
+  }
+
+  /**
+   * Swaps in a supplied zombie model, if one was provided.
+   *
+   * The procedural rig stays — invisible — because it is what carries the
+   * hitboxes and the animation. The external model rides on the body node, so
+   * it inherits position, facing and the death topple without needing to
+   * expose a skeleton the game understands. Limb hitboxes therefore stay
+   * approximate for external models, which is the accepted trade for letting
+   * any humanoid mesh drop straight in.
+   */
+  _attachExternalModel() {
+    // Zombies are pooled and reused across types, so the model is chosen once
+    // here from the generic key rather than per spawn.
+    const ext = Assets.get('zombie');
+    if (!ext) return;
+    this.external = ext;
+    ext.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    this.body.add(ext);
+    // Hide the block figure but keep it in the scene graph for raycasts.
+    for (const m of this.hitboxes) m.visible = false;
+    for (const extra of [this.neck, this.head, this.legs.left.foot, this.legs.right.foot,
+      this.arms.left.hand, this.arms.right.hand]) {
+      if (extra) extra.visible = false;
+    }
+    this.head.traverse?.((o) => { if (o.isMesh) o.visible = false; });
+    // Raycasts need to hit something, and an invisible mesh is skipped by the
+    // hitbox gather — so mark these as raycast-only rather than hidden.
+    for (const m of this.hitboxes) {
+      m.visible = true;
+      m.material = INVISIBLE_HITBOX;
+    }
+    if (ext.userData.animations?.length) {
+      this.mixer = new THREE.AnimationMixer(ext);
+      this.clips = ext.userData.animations;
+    }
   }
 
   // ================================================================= model
@@ -137,6 +184,8 @@ export class Zombie {
     reg(this.legs.left.shin, 'leftLeg');
     reg(this.legs.right.thigh, 'rightLeg');
     reg(this.legs.right.shin, 'rightLeg');
+
+    this._attachExternalModel();
 
     this.baseCloth = cloth;
     this.clothMeshes = [

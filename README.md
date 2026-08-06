@@ -195,6 +195,27 @@ a time and can be renailed for points.
 
 ---
 
+## Using your own 3D models
+
+The game generates all its art at runtime, but it will use supplied models in
+preference wherever you provide them. Put `.glb`/`.gltf` files under
+`assets/models/` and list them in `assets/models/manifest.json`:
+
+```json
+{
+  "zombie":       { "file": "zombie.glb", "scale": 1.0, "yaw": 180 },
+  "weapon.wasp9": { "file": "guns/smg.glb", "scale": 0.9 },
+  "prop.crates":  { "file": "props/crate.glb" }
+}
+```
+
+Nothing is required. A missing manifest, a missing file or a broken file all
+mean "use the built-in model", so a bad asset can never take the build down.
+Full key list, per-entry options and the triangle budget are in
+`assets/models/README.md`. Record every model's source and licence in
+`assets/models/CREDITS.md`, and do not add assets extracted from commercial
+games — that is the one thing that would make this project undistributable.
+
 ## Assets, and what this is not
 
 **Everything in this game is generated at runtime.** Textures are drawn

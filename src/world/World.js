@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { MAP, mapBounds } from './MapData.js';
 import { NavGrid } from './NavGrid.js';
-import { Tex, mat } from './Textures.js';
+import { Tex, mat, pbrMat } from './Textures.js';
 import { box, randomProp, makePipeRun, Mats } from './Props.js';
 import { Barricade } from './Barricade.js';
 import { Door } from './Door.js';
@@ -11,25 +11,58 @@ import { seededRandom, clamp, Emitter } from '../core/Util.js';
 const WALL_T = 0.5;
 const SILL_H = 1.05;
 
+/**
+ * Surface sets per room style. Every wall and floor is a full PBR material —
+ * albedo plus a normal and roughness map derived from the same canvas — so
+ * concrete reads as pitted, tile as grouted and glazed, and metal as panelled
+ * under a moving light. The derived maps cost one pass at boot and nothing at
+ * runtime beyond two extra texture fetches per fragment.
+ */
 const STYLE_MATS = {
   concrete: () => ({
-    wall: mat('w_concrete', { map: Tex.concrete(3), roughness: 0.95 }),
-    floor: mat('f_concrete', { map: Tex.concreteFloor(10), roughness: 0.94 }),
+    wall: pbrMat('w_concrete', {
+      tex: 'concrete', repeat: 3, roughness: 0.95, normalScale: 1.15,
+      pbr: { normal: 2.0, rough: 0.92, roughRange: 0.16 },
+    }),
+    floor: pbrMat('f_concrete', {
+      tex: 'concreteFloor', repeat: 10, roughness: 0.94, normalScale: 0.85,
+      pbr: { normal: 1.5, rough: 0.9, roughRange: 0.2 },
+    }),
     ceil: mat('c_concrete', { color: 0x2a2e30, roughness: 1 }),
   }),
   metal: () => ({
-    wall: mat('w_metal', { map: Tex.metalPanel(3), roughness: 0.55, metalness: 0.6 }),
-    floor: mat('f_metal', { map: Tex.metalPanel(8), roughness: 0.6, metalness: 0.5 }),
+    wall: pbrMat('w_metal', {
+      tex: 'metalPanel', repeat: 3, roughness: 0.55, metalness: 0.6, normalScale: 1.5,
+      pbr: { normal: 2.6, rough: 0.55, roughRange: 0.34 },
+    }),
+    floor: pbrMat('f_metal', {
+      tex: 'metalPanel', repeat: 8, roughness: 0.6, metalness: 0.5, normalScale: 1.2,
+      pbr: { normal: 2.2, rough: 0.6, roughRange: 0.3 },
+    }),
     ceil: mat('c_metal', { color: 0x22262a, roughness: 0.8, metalness: 0.4 }),
   }),
   tile: () => ({
-    wall: mat('w_tile', { map: Tex.tile(5), roughness: 0.4 }),
-    floor: mat('f_tile', { map: Tex.tile(9), roughness: 0.35 }),
+    // Grout lines are darker than the glaze, so inverted roughness makes the
+    // tiles shine and the joints stay matte.
+    wall: pbrMat('w_tile', {
+      tex: 'tile', repeat: 5, roughness: 0.4, normalScale: 1.6,
+      pbr: { normal: 2.8, rough: 0.42, roughRange: 0.34, invertRough: true },
+    }),
+    floor: pbrMat('f_tile', {
+      tex: 'tile', repeat: 9, roughness: 0.35, normalScale: 1.3,
+      pbr: { normal: 2.4, rough: 0.38, roughRange: 0.3, invertRough: true },
+    }),
     ceil: mat('c_tile', { color: 0x30343a, roughness: 0.9 }),
   }),
   dirt: () => ({
-    wall: mat('w_dirt', { map: Tex.dirt(4), roughness: 1 }),
-    floor: mat('f_dirt', { map: Tex.dirt(10), roughness: 1 }),
+    wall: pbrMat('w_dirt', {
+      tex: 'dirt', repeat: 4, roughness: 1, normalScale: 1.4,
+      pbr: { normal: 2.2, rough: 0.96, roughRange: 0.12 },
+    }),
+    floor: pbrMat('f_dirt', {
+      tex: 'dirt', repeat: 10, roughness: 1, normalScale: 1.1,
+      pbr: { normal: 1.8, rough: 0.97, roughRange: 0.1 },
+    }),
     ceil: mat('c_dirt', { color: 0x1a1712, roughness: 1 }),
   }),
 };

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
-import { Tex, mat } from './Textures.js';
+import { Tex, mat, pbrMat } from './Textures.js';
 import { rand, seededRandom } from '../core/Util.js';
+import { Assets } from './AssetLibrary.js';
 
 /**
  * Procedural prop + machine library. Everything is built from primitives and
@@ -48,12 +49,39 @@ export function lighten(hex, factor) {
 
 // ------------------------------------------------------------------ materials
 export const Mats = {
-  get wood() { return mat('wood', { map: Tex.wood(1), roughness: 0.92, metalness: 0.02 }); },
-  get plank() { return mat('plank', { map: Tex.wood(1), roughness: 0.95, color: 0xcaa06e }); },
-  get metal() { return mat('metal', { map: Tex.metalPanel(1), roughness: 0.52, metalness: 0.75 }); },
-  get rust() { return mat('rust', { map: Tex.rustMetal(1), roughness: 0.85, metalness: 0.4 }); },
+  // Props carry the same normal/roughness treatment as the room surfaces, so a
+  // crate lid catches the flashlight the way the wall behind it does.
+  get wood() {
+    return pbrMat('wood', {
+      tex: 'wood', repeat: 1, roughness: 0.92, metalness: 0.02, normalScale: 1.3,
+      pbr: { normal: 2.2, rough: 0.9, roughRange: 0.2 },
+    });
+  },
+  get plank() {
+    return pbrMat('plank', {
+      tex: 'wood', repeat: 1, roughness: 0.95, color: 0xcaa06e, normalScale: 1.1,
+      pbr: { normal: 2.0, rough: 0.93, roughRange: 0.16 },
+    });
+  },
+  get metal() {
+    return pbrMat('metal', {
+      tex: 'metalPanel', repeat: 1, roughness: 0.52, metalness: 0.75, normalScale: 1.4,
+      pbr: { normal: 2.4, rough: 0.52, roughRange: 0.32 },
+    });
+  },
+  get rust() {
+    return pbrMat('rust', {
+      tex: 'rustMetal', repeat: 1, roughness: 0.85, metalness: 0.4, normalScale: 1.6,
+      pbr: { normal: 2.8, rough: 0.86, roughRange: 0.26 },
+    });
+  },
   get darkMetal() { return mat('darkMetal', { color: 0x2b3033, roughness: 0.45, metalness: 0.85 }); },
-  get concrete() { return mat('concreteM', { map: Tex.concrete(1), roughness: 0.96 }); },
+  get concrete() {
+    return pbrMat('concreteM', {
+      tex: 'concrete', repeat: 1, roughness: 0.96, normalScale: 1.2,
+      pbr: { normal: 2.0, rough: 0.94, roughRange: 0.14 },
+    });
+  },
   get plastic() { return mat('plastic', { color: 0x3a4247, roughness: 0.6, metalness: 0.1 }); },
   get glass() {
     return mat('glass', { color: 0x9fd4d0, roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.32 });
@@ -1029,12 +1057,30 @@ export function makePowerupIcon(color, glyph) {
 }
 
 export function randomProp(kind, seed) {
-  switch (kind) {
-    case 'crates': return makeCrate(1 + rand(-0.15, 0.35), seed);
-    case 'barrels': return makeBarrel(seed);
-    case 'shelves': return makeShelf(seed);
-    case 'tables': return makeTable(seed);
-    case 'generators': return makeGenerator(seed);
-    default: return makeDebris(seed);
-  }
+  const built = () => {
+    switch (kind) {
+      case 'crates': return makeCrate(1 + rand(-0.15, 0.35), seed);
+      case 'barrels': return makeBarrel(seed);
+      case 'shelves': return makeShelf(seed);
+      case 'tables': return makeTable(seed);
+      case 'generators': return makeGenerator(seed);
+      default: return makeDebris(seed);
+    }
+  };
+  // A supplied model wins, but it still needs the collider footprint the
+  // procedural version would have carried, so the world can block it out.
+  const ext = Assets.get(`prop.${kind}`);
+  if (!ext) return built();
+  const { size } = AssetsMeasure(ext);
+  ext.userData.collider = {
+    w: size.x, h: size.y, d: size.z,
+    platform: kind === 'crates' || kind === 'barrels' || kind === 'tables',
+  };
+  return ext;
+}
+
+/** Bounding size of a loaded model, used to derive its collider. */
+function AssetsMeasure(obj) {
+  const box3 = new THREE.Box3().setFromObject(obj);
+  return { size: box3.getSize(new THREE.Vector3()) };
 }

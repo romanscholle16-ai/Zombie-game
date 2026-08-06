@@ -31,7 +31,12 @@ execFileSync(esbuild, [
   '--target=es2022',
   '--minify',
   `--outfile=${tmp}`,
+  // esbuild's alias matches on the whole specifier, so the addon paths need
+  // their own entries or "three" swallows the "three/addons/..." prefix.
   '--alias:three=./vendor/three/three.module.js',
+  '--alias:three/addons/loaders/GLTFLoader.js=./vendor/three/addons/loaders/GLTFLoader.js',
+  '--alias:three/addons/loaders/DRACOLoader.js=./vendor/three/addons/loaders/DRACOLoader.js',
+  '--alias:three/addons/utils/BufferGeometryUtils.js=./vendor/three/addons/utils/BufferGeometryUtils.js',
 ], { cwd: root, stdio: 'inherit' });
 
 const bundle = readFileSync(tmp, 'utf8');

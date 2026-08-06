@@ -5,6 +5,7 @@ import { MenuBackground } from './ui/MenuBackground.js';
 import { Settings } from './core/Settings.js';
 import { Input } from './core/Input.js';
 import { Audio } from './core/AudioEngine.js';
+import { Assets } from './world/AssetLibrary.js';
 import { clamp, el } from './core/Util.js';
 
 const BLEND_VERT = `
@@ -71,8 +72,15 @@ class App {
     requestAnimationFrame(this.loop);
   }
 
-  _boot() {
+  async _boot() {
     const l = document.getElementById('loading');
+    const tip = l.querySelector('.loading-tip');
+    // External models are optional; if none are supplied this resolves at once
+    // and every system falls back to its procedural model.
+    await Assets.load((frac, key) => {
+      tip.textContent = `Loading models — ${key} (${Math.round(frac * 100)}%)`;
+    });
+    if (Assets.entries.size) tip.textContent = `Loaded ${Assets.entries.size} models`;
     l.classList.add('done');
     setTimeout(() => l.remove(), 600);
   }

@@ -50,12 +50,93 @@ function blotches(ctx, size, rng, count, color, rMin, rMax, alphaMax = 0.25) {
   }
 }
 
+/** Source canvases, kept so normal/roughness maps can be derived from them. */
+const sources = new Map();
+
 function make(key, fn, repeat, size = 256) {
   if (cache.has(key)) return cache.get(key);
   const c = canvas(size);
   fn(c.getContext('2d'), size, seededRandom(hash(key)));
+  sources.set(key, c);
   const t = finish(c, repeat);
   cache.set(key, t);
+  return t;
+}
+
+/**
+ * Reads a canvas as a height field and Sobel-filters it into a tangent-space
+ * normal map. The albedo already encodes where a surface is pitted, cracked or
+ * grouted, so its luminance is a serviceable height source — and it costs one
+ * pass at boot rather than a second authored texture per material.
+ */
+function normalFromCanvas(c, strength = 1.6) {
+  const s = c.width;
+  const src = c.getContext('2d').getImageData(0, 0, s, s).data;
+  const h = new Float32Array(s * s);
+  for (let i = 0, p = 0; i < h.length; i++, p += 4) {
+    h[i] = (src[p] * 0.299 + src[p + 1] * 0.587 + src[p + 2] * 0.114) / 255;
+  }
+  const out = canvas(s);
+  const ctx = out.getContext('2d');
+  const img = ctx.createImageData(s, s);
+  const d = img.data;
+  const at = (x, y) => h[((y + s) % s) * s + ((x + s) % s)];
+  for (let y = 0; y < s; y++) {
+    for (let x = 0; x < s; x++) {
+      // Sobel in both axes, wrapping so the map tiles as cleanly as the albedo.
+      const dx = (at(x + 1, y - 1) + 2 * at(x + 1, y) + at(x + 1, y + 1))
+               - (at(x - 1, y - 1) + 2 * at(x - 1, y) + at(x - 1, y + 1));
+      const dy = (at(x - 1, y + 1) + 2 * at(x, y + 1) + at(x + 1, y + 1))
+               - (at(x - 1, y - 1) + 2 * at(x, y - 1) + at(x + 1, y - 1));
+      let nx = -dx * strength, ny = -dy * strength, nz = 1;
+      const inv = 1 / Math.hypot(nx, ny, nz);
+      nx *= inv; ny *= inv; nz *= inv;
+      const i = (y * s + x) * 4;
+      d[i] = (nx * 0.5 + 0.5) * 255;
+      d[i + 1] = (ny * 0.5 + 0.5) * 255;
+      d[i + 2] = (nz * 0.5 + 0.5) * 255;
+      d[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return out;
+}
+
+/**
+ * Roughness from the same luminance: darker, grimier areas read as rougher,
+ * lighter worn areas as more polished. `base` sets the midpoint, `range` how
+ * far the variation swings.
+ */
+function roughnessFromCanvas(c, base = 0.8, range = 0.28, invert = false) {
+  const s = c.width;
+  const src = c.getContext('2d').getImageData(0, 0, s, s).data;
+  const out = canvas(s);
+  const ctx = out.getContext('2d');
+  const img = ctx.createImageData(s, s);
+  const d = img.data;
+  for (let i = 0; i < s * s; i++) {
+    const p = i * 4;
+    const l = (src[p] * 0.299 + src[p + 1] * 0.587 + src[p + 2] * 0.114) / 255;
+    const t = invert ? l : 1 - l;
+    const v = clamp(base + (t - 0.5) * 2 * range, 0.04, 1) * 255;
+    d[p] = d[p + 1] = d[p + 2] = v;
+    d[p + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  return out;
+}
+
+function derived(key, suffix, build, repeat) {
+  const k = `${key}:${suffix}`;
+  if (cache.has(k)) return cache.get(k);
+  const src = sources.get(key);
+  if (!src) return null;
+  const t = new THREE.CanvasTexture(build(src));
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(repeat, repeat);
+  t.anisotropy = 8;
+  // Data maps stay linear — only colour maps get the sRGB transfer.
+  cache.set(k, t);
   return t;
 }
 
@@ -329,11 +410,49 @@ export const Tex = {
     return t;
   },
 
+  /**
+   * A full PBR set for a surface: albedo plus derived normal and roughness.
+   * `factory` is any Tex.* function; the derived maps come from its canvas, so
+   * nothing extra is authored or downloaded.
+   */
+  pbr(name, repeat, { normal = 1.6, rough = 0.85, roughRange = 0.26, invertRough = false } = {}) {
+    const map = this[name]?.(repeat);
+    if (!map) return { map: null };
+    return {
+      map,
+      normalMap: derived(name, `n${normal}`, (c) => normalFromCanvas(c, normal), repeat),
+      roughnessMap: derived(name, `r${rough}${roughRange}${invertRough}`,
+        (c) => roughnessFromCanvas(c, rough, roughRange, invertRough), repeat),
+    };
+  },
+
   dispose() {
     for (const t of cache.values()) t.dispose?.();
     cache.clear();
+    sources.clear();
   },
 };
+
+/**
+ * Shared PBR material. `tex` names a Tex factory; the normal and roughness
+ * maps are derived from it. Falls back to a plain material when the surface
+ * has no procedural source.
+ */
+export function pbrMat(key, { tex, repeat = 1, normalScale = 1, pbr, ...props } = {}) {
+  if (matCache.has(key)) return matCache.get(key);
+  const set = tex ? Tex.pbr(tex, repeat, pbr) : {};
+  const m = new THREE.MeshStandardMaterial({
+    ...props,
+    map: set.map ?? props.map ?? null,
+  });
+  if (set.normalMap) {
+    m.normalMap = set.normalMap;
+    m.normalScale = new THREE.Vector2(normalScale, normalScale);
+  }
+  if (set.roughnessMap) m.roughnessMap = set.roughnessMap;
+  matCache.set(key, m);
+  return m;
+}
 
 /** Shared material factory so draw calls batch well. */
 const matCache = new Map();

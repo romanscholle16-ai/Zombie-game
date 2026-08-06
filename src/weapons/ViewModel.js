@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { makeWeaponModel, makeKnifeModel } from '../world/Props.js';
 import { Tex } from '../world/Textures.js';
 import { applyEnvironment } from '../world/Environment.js';
+import { Assets } from '../world/AssetLibrary.js';
 import { damp, clamp, rand } from '../core/Util.js';
 
 const HIP = new THREE.Vector3(0.13, -0.105, -0.36);
@@ -15,6 +16,30 @@ const VM_FOV = 65;
 // firearm proportions, anything near 1:1 fills half the screen in a 65-degree
 // view — this is the scale that keeps a 1.4 m bolt gun readable in frame.
 const VM_SCALE = 0.48;
+
+/**
+ * Fills in the anchors the view model needs for a model that came from the
+ * asset library. The manifest can state them explicitly; otherwise they are
+ * derived from the bounding box, which is close enough to hold a gun by.
+ */
+function applyExternalWeaponMetadata(model, def) {
+  const spec = model.userData.spec ?? {};
+  const box3 = new THREE.Box3().setFromObject(model);
+  const size = box3.getSize(new THREE.Vector3());
+  const center = box3.getCenter(new THREE.Vector3());
+  const u = model.userData;
+  u.gripAnchor = spec.grip
+    ? new THREE.Vector3(...spec.grip)
+    : new THREE.Vector3(center.x, box3.min.y + size.y * 0.32, center.z - size.z * 0.16);
+  u.muzzle = spec.muzzle
+    ? new THREE.Vector3(...spec.muzzle)
+    : new THREE.Vector3(center.x, center.y, box3.max.z);
+  u.sightHeight = spec.sightHeight ?? box3.max.y;
+  if (spec.opticMag) u.optic = { magnification: spec.opticMag, scoped: spec.opticMag >= 4 };
+  else u.optic = def.shape?.optic
+    ? { magnification: def.shape.opticMag ?? 2, scoped: (def.shape.opticMag ?? 2) >= 4 }
+    : null;
+}
 
 /**
  * First-person weapon rendering. Lives on a dedicated overlay scene so the
@@ -85,7 +110,12 @@ export class ViewModel {
 
   setWeapon(def) {
     if (this.model) this.gunRoot.remove(this.model);
-    this.model = makeWeaponModel(def, VM_SCALE);
+    // A supplied weapon model replaces the procedural one, but the procedural
+    // build is what knows where the grip, muzzle and sights are — so when an
+    // external model has no metadata of its own, measure it for the same.
+    const ext = Assets.get(`weapon.${def.id}`, { scale: VM_SCALE });
+    this.model = ext ?? makeWeaponModel(def, VM_SCALE);
+    if (ext) applyExternalWeaponMetadata(ext, def);
     this.model.traverse((o) => { o.castShadow = false; o.receiveShadow = false; });
     this.gunRoot.add(this.model);
     // Hang the model off its grip so weapons of wildly different length all
