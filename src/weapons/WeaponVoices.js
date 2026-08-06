@@ -142,8 +142,15 @@ export const VOICES = {
  * Voice for a weapon definition. Refitted weapons keep their identity but gain
  * a brighter resonant edge, so an upgrade is audible as well as visible.
  */
+const cache = new Map();
+
 export function voiceFor(def) {
-  const base = VOICES[def.id] ?? VOICES[stripUpgrade(def.id)] ?? {};
+  // Called on every shot, up to sixteen times a second — build each weapon's
+  // voice once and hand back the same object.
+  const key = `${def.id}#${def.upgradeLevel ?? 0}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const base = VOICES[def.id] ?? {};
   const v = { ...DEFAULT_VOICE, ...base };
   const lvl = def.upgradeLevel ?? 0;
   if (lvl > 0) {
@@ -153,9 +160,6 @@ export function voiceFor(def) {
     v.tail = Math.min(1.2, v.tail * (1 + 0.12 * lvl));
     v.tailDur *= 1 + 0.15 * lvl;
   }
+  cache.set(key, v);
   return v;
-}
-
-function stripUpgrade(id) {
-  return id;
 }

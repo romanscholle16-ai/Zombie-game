@@ -2,6 +2,18 @@ import { Settings } from './Settings.js';
 import { clamp, rand, pick } from './Util.js';
 
 /**
+ * Summed layer gain of a service pistol, used as the reference every other
+ * weapon's shot is normalised against.
+ */
+const SHOT_REF = 1.75;
+/**
+ * Divisor that leaves the SFX bus room for everything that is not a gunshot.
+ * Tuned so a single shot lands near the level it had before the layered
+ * rebuild, while sustained automatic fire no longer pins the compressor.
+ */
+const SHOT_HEADROOM = 1.28;
+
+/**
  * Fully procedural audio. Every sound is synthesised at runtime with the Web Audio
  * API — there are no sample files, so nothing is licensed from anyone.
  */
@@ -23,11 +35,13 @@ class AudioEngine {
 
     this.master = this.ctx.createGain();
     this.comp = this.ctx.createDynamicsCompressor();
-    this.comp.threshold.value = -14;
-    this.comp.knee.value = 26;
-    this.comp.ratio.value = 8;
-    this.comp.attack.value = 0.004;
-    this.comp.release.value = 0.22;
+    // Glue and a safety net, not a limiter. The old -14/8:1 setting was hard
+    // enough that one loud source could duck the entire mix.
+    this.comp.threshold.value = -10;
+    this.comp.knee.value = 30;
+    this.comp.ratio.value = 4;
+    this.comp.attack.value = 0.005;
+    this.comp.release.value = 0.3;
     this.comp.connect(this.master);
     this.master.connect(this.ctx.destination);
 
@@ -40,7 +54,7 @@ class AudioEngine {
     this.reverb = this.ctx.createConvolver();
     this.reverb.buffer = this._impulse(2.1, 2.6);
     this.reverbGain = this.ctx.createGain();
-    this.reverbGain.gain.value = 0.26;
+    this.reverbGain.gain.value = 0.21;
     this.reverb.connect(this.reverbGain);
     this.reverbGain.connect(this.comp);
 
@@ -179,8 +193,24 @@ class AudioEngine {
       ...(AudioEngine.WEIGHT_VOICES[weight] ?? AudioEngine.WEIGHT_VOICES.medium),
       ...(voice ?? {}),
     };
-    const v = volume * (suppressed ? 0.4 : 1);
+    // Layered shots are much fuller than the two-layer version they replaced,
+    // and without this they peak around 2.9 on the bus where the old ones hit
+    // 1.6 — enough to hold the master compressor down and bury every quieter
+    // cue in the game. Normalising on the summed layer gain keeps each
+    // weapon's character and its loudness ordering while pulling the range
+    // back to something the bus can carry.
+    const raw = p.mech + p.crackLevel + p.punch * 0.5 + p.ring + p.tail * 0.32;
+    const norm = Math.sqrt(SHOT_REF / Math.max(0.3, raw)) / SHOT_HEADROOM;
+    const v = volume * (suppressed ? 0.4 : 1) * norm;
     const jitter = 1 + (Math.random() - 0.5) * (p.detune ?? 0.03);
+
+    // Automatic fire would otherwise stack a fresh half-second reverb tail on
+    // every shot — a dozen at once on a fast weapon. Past a certain cadence
+    // the tail is dropped and the resonance trimmed, so sustained fire stays
+    // dense without swamping the reverb bus.
+    const since = t - (this._lastShotT ?? -1);
+    this._lastShotT = t;
+    const rapid = clamp((0.16 - since) / 0.16, 0, 1);
 
     // ---- capacitor charge, for the weapons that have one
     if (p.charge) {
@@ -239,21 +269,21 @@ class AudioEngine {
     o.start(t); o.stop(t + p.bodyDur + 0.05);
 
     // ---- ring: barrel harmonic, receiver clang, or capacitor whine
-    if (p.ring > 0.001) {
+    if (p.ring * (1 - rapid * 0.55) > 0.001) {
       const rn = this._noiseSource(p.ringDur, 1);
       const rf = this.ctx.createBiquadFilter();
       rf.type = 'bandpass';
       rf.frequency.value = p.ringF * jitter;
       rf.Q.value = p.ringQ;
       const rg = this.ctx.createGain();
-      rg.gain.setValueAtTime(p.ring * v, t + 0.004);
+      rg.gain.setValueAtTime(p.ring * (1 - rapid * 0.55) * v, t + 0.004);
       rg.gain.exponentialRampToValueAtTime(0.0001, t + p.ringDur);
       rn.connect(rf); rf.connect(rg);
       this._out(rg, { pan, reverb: 0.4 });
     }
 
     // ---- tail: the room answering back
-    if (p.tail > 0.001 && !suppressed) {
+    if (p.tail > 0.001 && !suppressed && rapid < 0.75) {
       const tn = this._noiseSource(p.tailDur, 0.7);
       const tf = this.ctx.createBiquadFilter();
       tf.type = 'lowpass';
@@ -261,10 +291,10 @@ class AudioEngine {
       tf.frequency.exponentialRampToValueAtTime(Math.max(90, p.tailF * 0.25), t + p.tailDur);
       const tg = this.ctx.createGain();
       tg.gain.setValueAtTime(0.0001, t);
-      tg.gain.exponentialRampToValueAtTime(p.tail * 0.32 * v, t + 0.03);
+      tg.gain.exponentialRampToValueAtTime(p.tail * 0.32 * (1 - rapid) * v, t + 0.03);
       tg.gain.exponentialRampToValueAtTime(0.0001, t + p.tailDur);
       tn.connect(tf); tf.connect(tg);
-      this._out(tg, { pan, reverb: 0.85 });
+      this._out(tg, { pan, reverb: 0.55 * (1 - rapid) });
     }
   }
 
@@ -456,7 +486,7 @@ class AudioEngine {
     f.type = 'bandpass'; f.frequency.setValueAtTime(rand(700, 1400), t);
     f.frequency.exponentialRampToValueAtTime(180, t + 0.28); f.Q.value = 2.2;
     const g = this.ctx.createGain();
-    g.gain.setValueAtTime(0.4 * volume, t);
+    g.gain.setValueAtTime(0.85 * volume, t);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
     n.connect(f); f.connect(g);
     this._out(g, { pan, reverb: 0.35 });
@@ -659,7 +689,7 @@ class AudioEngine {
     f.type = surface === 'metal' ? 'bandpass' : 'lowpass';
     f.frequency.value = surface === 'metal' ? 2200 : 620;
     const g = this.ctx.createGain();
-    g.gain.setValueAtTime(0.1 * volume, t);
+    g.gain.setValueAtTime(0.42 * volume, t);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
     n.connect(f); f.connect(g);
     this._out(g, { pan, reverb: 0.15 });
@@ -692,7 +722,7 @@ class AudioEngine {
     if (kind === 'select') o.frequency.exponentialRampToValueAtTime(1320, t + 0.06);
     if (kind === 'deny') o.frequency.exponentialRampToValueAtTime(110, t + 0.14);
     const g = this.ctx.createGain();
-    g.gain.setValueAtTime(0.06 * volume, t);
+    g.gain.setValueAtTime(0.16 * volume, t);
     g.gain.exponentialRampToValueAtTime(0.0001, t + (kind === 'deny' ? 0.16 : 0.08));
     o.connect(g); g.connect(this.sfxBus);
     o.start(t); o.stop(t + 0.2);
