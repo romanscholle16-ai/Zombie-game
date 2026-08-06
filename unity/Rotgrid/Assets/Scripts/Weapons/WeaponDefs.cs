@@ -53,6 +53,12 @@ namespace Rotgrid
         public float barrelLen = 0.3f, bore = 0.028f, magLen = 0.2f, stockLen = 0.24f;
         public bool hasGuard = true, hasMag = true, hasStock = true;
         public bool hasOptic, hasDrum, hasTube, hasCell;
+        public float magCurve = 0.4f;      // how far the magazine sweeps forward
+        public float opticMag = 2f;        // true magnification; >= 4 gets a scope
+        public string muzzle = "cage";     // cage | brake | suppressor | none
+        public bool wood;                  // walnut furniture instead of polymer
+        public bool compensator;           // ported slide on a machine pistol
+        public bool revolver;              // cylinder and underlug, no magazine
 
         public Color Tint { get { return Util.Hex(tint); } }
         public Color Accent { get { return Util.Hex(accent); } }
@@ -127,7 +133,8 @@ namespace Rotgrid
                 reloadTime = 1.5f, emptyReloadTime = 1.9f, adsTime = 0.18f,
                 recoilV = 1.5f, recoilH = 0.5f, spreadHip = 0.038f, spreadAds = 0.004f, spreadMove = 0.026f,
                 wallAmmoCost = 250, boxWeight = 0, sound = SoundWeight.Light,
-                recvW = 0.055f, recvH = 0.11f, recvL = 0.2f, barrelLen = 0.14f, hasStock = false, magLen = 0.14f, bore = 0.02f,
+                recvW = 0.05f, recvH = 0.1f, recvL = 0.2f, barrelLen = 0.12f, hasStock = false, hasGuard = false,
+                magLen = 0.15f, bore = 0.011f, muzzle = "none",
                 blurb = "Standard-issue service pistol. Reliable, unremarkable, and free.",
             });
             Add(new WeaponDef
@@ -137,8 +144,9 @@ namespace Rotgrid
                 reloadTime = 2.4f, emptyReloadTime = 2.9f, adsTime = 0.22f,
                 recoilV = 4.2f, recoilH = 1.4f, spreadHip = 0.055f, spreadAds = 0.003f, spreadMove = 0.04f,
                 headMult = 3f, boxWeight = 12, sound = SoundWeight.Heavy, tint = 0x3b3f42, accent = 0x8d7a4a,
-                recvW = 0.06f, recvH = 0.125f, recvL = 0.24f, barrelLen = 0.2f,
-                hasStock = false, hasMag = false, hasDrum = true, bore = 0.026f,
+                recvW = 0.052f, recvH = 0.11f, recvL = 0.2f, barrelLen = 0.19f, revolver = true, hasGuard = false,
+                bore = 0.0125f, muzzle = "none",
+                hasStock = false, hasMag = false,
                 blurb = "Hand cannon. Six chances to remove a head from its shoulders.",
             });
             Add(new WeaponDef
@@ -148,7 +156,8 @@ namespace Rotgrid
                 reloadTime = 1.8f, emptyReloadTime = 2.2f, adsTime = 0.2f,
                 recoilV = 1.5f, recoilH = 1.1f, spreadHip = 0.07f, spreadAds = 0.02f, spreadMove = 0.05f,
                 wallCost = 900, wallAmmoCost = 450, sound = SoundWeight.Light, tint = 0x33383c,
-                recvW = 0.058f, recvH = 0.11f, recvL = 0.24f, barrelLen = 0.16f, hasStock = false, magLen = 0.24f,
+                recvW = 0.05f, recvH = 0.1f, recvL = 0.24f, barrelLen = 0.15f, hasStock = false, hasGuard = false,
+                magLen = 0.26f, bore = 0.0105f, compensator = true, muzzle = "brake",
                 blurb = "Full-auto machine pistol. Empties fast, hits like a swarm.",
             });
 
@@ -160,7 +169,8 @@ namespace Rotgrid
                 reloadTime = 1.9f, emptyReloadTime = 2.5f, adsTime = 0.2f,
                 recoilV = 1.1f, recoilH = 0.6f, spreadHip = 0.05f, spreadAds = 0.012f, spreadMove = 0.035f,
                 wallCost = 1000, wallAmmoCost = 500, boxWeight = 12, sound = SoundWeight.Light, tint = 0x2b3033,
-                recvW = 0.075f, recvH = 0.12f, recvL = 0.3f, barrelLen = 0.2f, stockLen = 0.16f, magLen = 0.22f,
+                recvW = 0.052f, recvH = 0.115f, recvL = 0.3f, barrelLen = 0.19f, stockLen = 0.17f, magLen = 0.24f,
+                magCurve = 0.22f, bore = 0.0105f, muzzle = "cage",
                 blurb = "Compact 9mm. The dependable answer to the first ten rounds.",
             });
             Add(new WeaponDef
@@ -170,7 +180,8 @@ namespace Rotgrid
                 reloadTime = 2.1f, emptyReloadTime = 2.7f, adsTime = 0.22f,
                 recoilV = 1.3f, recoilH = 0.9f, spreadHip = 0.055f, spreadAds = 0.014f, spreadMove = 0.04f,
                 wallCost = 1300, wallAmmoCost = 600, boxWeight = 11, sound = SoundWeight.Light, accent = 0x9a6b3a,
-                recvW = 0.08f, recvH = 0.13f, recvL = 0.32f, barrelLen = 0.22f, stockLen = 0.2f, magLen = 0.26f, hasOptic = true,
+                recvW = 0.054f, recvH = 0.12f, recvL = 0.32f, barrelLen = 0.21f, stockLen = 0.2f, magLen = 0.27f,
+                magCurve = 0.26f, bore = 0.0105f, hasOptic = true, opticMag = 1.4f, muzzle = "brake",
                 blurb = "Overclocked bolt group. Absurd rate of fire, appetite to match.",
             });
             Add(new WeaponDef
@@ -180,7 +191,8 @@ namespace Rotgrid
                 reloadTime = 2f, emptyReloadTime = 2.6f, adsTime = 0.19f,
                 recoilV = 0.9f, recoilH = 0.5f, spreadHip = 0.042f, spreadAds = 0.008f, spreadMove = 0.03f,
                 boxWeight = 8, tint = 0x2a3440, accent = 0x6fa8c9,
-                recvW = 0.082f, recvH = 0.13f, recvL = 0.34f, barrelLen = 0.24f, stockLen = 0.2f, magLen = 0.28f, hasOptic = true,
+                recvW = 0.054f, recvH = 0.122f, recvL = 0.34f, barrelLen = 0.23f, stockLen = 0.2f, magLen = 0.29f,
+                magCurve = 0.3f, bore = 0.011f, hasOptic = true, opticMag = 2f, muzzle = "suppressor",
                 blurb = "Cryo-treated barrel shroud. Stays accurate long past reason.",
             });
 
@@ -192,7 +204,8 @@ namespace Rotgrid
                 reloadTime = 2.2f, emptyReloadTime = 2.9f, adsTime = 0.26f,
                 recoilV = 1.6f, recoilH = 0.6f, spreadHip = 0.06f, spreadAds = 0.005f, spreadMove = 0.04f,
                 wallCost = 1200, wallAmmoCost = 600, boxWeight = 12, tint = 0x33393c,
-                recvL = 0.4f, barrelLen = 0.3f, stockLen = 0.24f, magLen = 0.24f,
+                recvW = 0.056f, recvH = 0.13f, recvL = 0.4f, barrelLen = 0.3f, stockLen = 0.24f,
+                magLen = 0.25f, magCurve = 0.55f, bore = 0.0115f, muzzle = "cage",
                 blurb = "Service rifle. Punches through a shambling queue without complaint.",
             });
             Add(new WeaponDef
@@ -202,7 +215,8 @@ namespace Rotgrid
                 reloadTime = 2.4f, emptyReloadTime = 3f, adsTime = 0.28f,
                 recoilV = 2f, recoilH = 0.7f, spreadHip = 0.062f, spreadAds = 0.004f, spreadMove = 0.045f,
                 wallCost = 1400, wallAmmoCost = 700, tint = 0x3a3a32, accent = 0x7a6f4a,
-                recvW = 0.088f, recvH = 0.14f, recvL = 0.42f, barrelLen = 0.34f, stockLen = 0.24f, magLen = 0.26f, hasOptic = true,
+                recvW = 0.058f, recvH = 0.134f, recvL = 0.42f, barrelLen = 0.34f, stockLen = 0.24f, magLen = 0.27f,
+                magCurve = 0.5f, bore = 0.0135f, hasOptic = true, opticMag = 2.5f, muzzle = "brake",
                 blurb = "Heavy-calibre battle rifle. Slower, meaner, worth the recoil.",
             });
             Add(new WeaponDef
@@ -213,7 +227,8 @@ namespace Rotgrid
                 reloadTime = 2.3f, emptyReloadTime = 2.9f, adsTime = 0.25f,
                 recoilV = 1.8f, recoilH = 0.5f, spreadHip = 0.05f, spreadAds = 0.003f, spreadMove = 0.04f,
                 boxWeight = 8, tint = 0x2d3540, accent = 0x9fb0c4,
-                recvW = 0.088f, recvH = 0.14f, recvL = 0.42f, barrelLen = 0.34f, stockLen = 0.26f, magLen = 0.26f, hasOptic = true,
+                recvW = 0.058f, recvH = 0.134f, recvL = 0.42f, barrelLen = 0.34f, stockLen = 0.26f, magLen = 0.27f,
+                magCurve = 0.5f, bore = 0.012f, hasOptic = true, opticMag = 4f, muzzle = "cage",
                 blurb = "Three-round burst with a locked trigger group. Surgical at range.",
             });
 
@@ -227,8 +242,8 @@ namespace Rotgrid
                 spreadHip = 0.11f, spreadAds = 0.075f, spreadMove = 0.13f,
                 wallCost = 1200, wallAmmoCost = 600, boxWeight = 11, sound = SoundWeight.Shotgun,
                 tint = 0x3a2f26, accent = 0x6a5236,
-                recvW = 0.09f, recvH = 0.14f, recvL = 0.38f, barrelLen = 0.36f, stockLen = 0.24f,
-                hasMag = false, hasTube = true, bore = 0.038f,
+                recvW = 0.058f, recvH = 0.14f, recvL = 0.34f, barrelLen = 0.4f, stockLen = 0.28f, wood = true, bore = 0.0185f,
+                hasMag = false, hasTube = true,
                 blurb = "Pump-action crowd editor. Devastating inside four metres.",
             });
             Add(new WeaponDef
@@ -239,8 +254,8 @@ namespace Rotgrid
                 range = 26f, falloff = 0.8f, recoilV = 3.2f, recoilH = 1.4f,
                 spreadHip = 0.1f, spreadAds = 0.07f, spreadMove = 0.12f,
                 boxWeight = 8, sound = SoundWeight.Shotgun, tint = 0x30363a, accent = 0x8a3f2a,
-                recvW = 0.095f, recvH = 0.15f, recvL = 0.4f, barrelLen = 0.34f, stockLen = 0.24f,
-                magLen = 0.3f, hasDrum = true, bore = 0.038f,
+                recvW = 0.058f, recvH = 0.145f, recvL = 0.38f, barrelLen = 0.34f, stockLen = 0.24f, bore = 0.0185f,
+                hasDrum = true,
                 blurb = "Fully automatic scattergun. Feed it points, it feeds you space.",
             });
 
@@ -253,7 +268,8 @@ namespace Rotgrid
                 recoilV = 2.2f, recoilH = 1f, spreadHip = 0.09f, spreadAds = 0.008f, spreadMove = 0.07f,
                 moveScale = 0.88f, wallCost = 1800, wallAmmoCost = 800, boxWeight = 9, sound = SoundWeight.Heavy,
                 tint = 0x2f3336, accent = 0x555b5e,
-                recvW = 0.1f, recvH = 0.16f, recvL = 0.48f, barrelLen = 0.4f, stockLen = 0.26f, magLen = 0.3f, hasDrum = true,
+                recvW = 0.058f, recvH = 0.155f, recvL = 0.48f, barrelLen = 0.42f, stockLen = 0.26f, hasDrum = true,
+                bore = 0.0145f, muzzle = "cage",
                 blurb = "Hundred-round belt. The reload is a commitment; the burst is worth it.",
             });
             Add(new WeaponDef
@@ -263,7 +279,8 @@ namespace Rotgrid
                 reloadTime = 4.6f, emptyReloadTime = 5.4f, adsTime = 0.46f,
                 recoilV = 2.4f, recoilH = 1.2f, spreadHip = 0.095f, spreadAds = 0.01f, spreadMove = 0.075f,
                 moveScale = 0.84f, boxWeight = 7, sound = SoundWeight.Heavy, tint = 0x35302c, accent = 0x8a6a3a,
-                recvW = 0.105f, recvH = 0.17f, recvL = 0.5f, barrelLen = 0.42f, stockLen = 0.26f, magLen = 0.32f, hasDrum = true,
+                recvW = 0.058f, recvH = 0.16f, recvL = 0.5f, barrelLen = 0.44f, stockLen = 0.26f, hasDrum = true,
+                bore = 0.0155f, muzzle = "brake",
                 blurb = "Rotary-fed monster. Holds a corridor by itself.",
             });
 
@@ -277,8 +294,9 @@ namespace Rotgrid
                 recoilV = 6f, recoilH = 1f, spreadHip = 0.12f, spreadAds = 0.0008f, spreadMove = 0.1f,
                 moveScale = 0.92f, wallCost = 1600, wallAmmoCost = 700, boxWeight = 9, sound = SoundWeight.Heavy,
                 tint = 0x2c3130, accent = 0x6a7a68,
-                recvW = 0.085f, recvH = 0.14f, recvL = 0.5f, barrelLen = 0.48f, stockLen = 0.3f,
-                magLen = 0.18f, hasOptic = true, bore = 0.024f,
+                recvW = 0.056f, recvH = 0.135f, recvL = 0.5f, barrelLen = 0.52f, stockLen = 0.32f, magCurve = 0.14f,
+                wood = true, opticMag = 6f, muzzle = "brake",
+                magLen = 0.15f, bore = 0.0125f, hasOptic = true,
                 blurb = "Bolt-action anti-materiel rifle. One round, one corridor.",
             });
             Add(new WeaponDef
@@ -289,8 +307,9 @@ namespace Rotgrid
                 headMult = 3.4f, range = 240f, falloff = 0.05f,
                 recoilV = 7f, recoilH = 0.6f, spreadHip = 0.14f, spreadAds = 0.0004f, spreadMove = 0.11f,
                 moveScale = 0.9f, boxWeight = 6, sound = SoundWeight.Energy, tint = 0x24303a, accent = 0x66d9ff,
-                recvW = 0.09f, recvH = 0.15f, recvL = 0.52f, barrelLen = 0.5f, stockLen = 0.3f,
-                magLen = 0.18f, hasOptic = true, hasCell = true,
+                recvW = 0.058f, recvH = 0.142f, recvL = 0.52f, barrelLen = 0.54f, stockLen = 0.3f, magCurve = 0.12f,
+                opticMag = 8f, muzzle = "brake",
+                magLen = 0.16f, bore = 0.0125f, hasOptic = true, hasCell = true,
                 blurb = "Magnetically accelerated slug. Passes through everything in the hall.",
             });
 
@@ -304,8 +323,9 @@ namespace Rotgrid
                 recoilV = 2.2f, recoilH = 0.4f, spreadHip = 0.03f, spreadAds = 0.002f, spreadMove = 0.02f,
                 special = SpecialEffect.Chain, chainTargets = 5, chainRadius = 6.5f, chainFalloff = 0.7f,
                 boxWeight = 3, sound = SoundWeight.Energy, tint = 0x1e2a30, accent = 0x66d9ff,
-                recvW = 0.1f, recvH = 0.16f, recvL = 0.44f, barrelLen = 0.36f, stockLen = 0.22f,
-                hasMag = false, hasOptic = true, hasCell = true, bore = 0.05f,
+                recvW = 0.058f, recvH = 0.155f, recvL = 0.44f, barrelLen = 0.36f, stockLen = 0.22f, opticMag = 1.5f,
+                muzzle = "none",
+                hasMag = false, hasOptic = true, hasCell = true, bore = 0.024f,
                 blurb = "Prototype capacitor lance. Arcs between everything with a pulse.",
             });
             Add(new WeaponDef
@@ -317,8 +337,9 @@ namespace Rotgrid
                 recoilV = 3.4f, recoilH = 0.5f, spreadHip = 0.04f, spreadAds = 0.006f, spreadMove = 0.03f,
                 special = SpecialEffect.Blast, blastRadius = 4.4f, blastDamage = 380f,
                 boxWeight = 3, sound = SoundWeight.Energy, tint = 0x232a1e, accent = 0x9fd93a,
-                recvW = 0.11f, recvH = 0.17f, recvL = 0.42f, barrelLen = 0.3f, stockLen = 0.22f,
-                magLen = 0.24f, hasCell = true, bore = 0.07f,
+                recvW = 0.058f, recvH = 0.165f, recvL = 0.42f, barrelLen = 0.3f, stockLen = 0.22f, magCurve = 0.2f,
+                muzzle = "none",
+                magLen = 0.24f, hasCell = true, bore = 0.032f,
                 blurb = "Fires an unstable spore charge. Do not discharge at arm's length.",
             });
         }

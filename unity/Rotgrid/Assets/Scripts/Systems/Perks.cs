@@ -10,7 +10,8 @@ namespace Rotgrid
     /// </summary>
     public class PerkDef
     {
-        public string id, name, shortName, letter, effect;
+        public string id, name, shortName, letter, effect, tagline;
+        public string[] detail;
         public int cost;
         public int color;
         public Color Color { get { return Util.Hex(color); } }
@@ -21,15 +22,41 @@ namespace Rotgrid
         public static readonly List<PerkDef> All = new List<PerkDef>
         {
             new PerkDef { id="vital", name="VITAL SURGE", shortName="VITAL", letter="V", cost=2500, color=0xc0392b,
-                          effect="Raises maximum health from 100 to 175." },
+                          tagline="Take more punishment",
+                          effect="Raises maximum health from 100 to 175.",
+                          detail=new[]{
+                              "Maximum health 100 to 175.",
+                              "Refills you to the new maximum the moment you drink it.",
+                              "Roughly two extra hits before you go down, at any round.",
+                              "Lost when you are downed, like every perk." } },
             new PerkDef { id="rapid", name="QUICK HANDS", shortName="HANDS", letter="Q", cost=3000, color=0xe8a33d,
-                          effect="Reloads roughly twice as fast." },
+                          tagline="Get back in the fight",
+                          effect="Reloads roughly twice as fast.",
+                          detail=new[]{
+                              "Reload time cut by about half on every weapon.",
+                              "Biggest gain on belt-fed guns, where a reload is otherwise five seconds.",
+                              "Turns a magazine dump from a death sentence into a pause." } },
             new PerkDef { id="swift", name="LIGHT STEP", shortName="STEP", letter="L", cost=2000, color=0x4aa3ff,
-                          effect="Move 13% faster and swap weapons quicker." },
+                          tagline="Stay ahead of the train",
+                          effect="Move 13% faster and swap weapons quicker.",
+                          detail=new[]{
+                              "Base movement speed +13%, sprint included.",
+                              "Weapon swaps come up noticeably faster.",
+                              "Enough of an edge to hold a loop that would otherwise close on you." } },
             new PerkDef { id="medic", name="SECOND WIND", shortName="WIND", letter="S", cost=1500, color=0x9fd93a,
-                          effect="Longer bleed-out and one self-revive per life." },
+                          tagline="One more chance",
+                          effect="Longer bleed-out and one self-revive per life.",
+                          detail=new[]{
+                              "Bleed-out timer 30s to 45s.",
+                              "Grants one self-revive: bleed out once and you get back up at half health.",
+                              "The cheapest perk, and the one that most often saves a high round." } },
             new PerkDef { id="endure", name="IRON LUNG", shortName="LUNG", letter="I", cost=2000, color=0xb479ff,
-                          effect="Sprint roughly twice as long and recover faster." },
+                          tagline="Run further, recover sooner",
+                          effect="Sprint roughly twice as long and recover faster.",
+                          detail=new[]{
+                              "Stamina drain nearly halved; regeneration raised by half again.",
+                              "Long map loops stop breaking into a walk halfway round.",
+                              "Pairs with LIGHT STEP for a train you can hold indefinitely." } },
         };
 
         public static PerkDef Get(string id)

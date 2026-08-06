@@ -114,6 +114,13 @@ namespace Rotgrid
         {
             float cx = w * 0.5f, cy = h * 0.5f;
 
+            float scopeT = run.viewModel != null ? run.viewModel.ScopeT : 0f;
+            if (scopeT > 0.001f)
+            {
+                DrawScope(run, w, h, scopeT);
+                return;
+            }
+
             if (GameSettings.ShowCrosshair && !run.player.downed)
             {
                 float gap = run.weapons.Ads ? UiKit.Px(4) : UiKit.Px(8);
@@ -146,9 +153,91 @@ namespace Rotgrid
             if (run.prompt.valid) DrawPrompt(run.prompt, cx, cy);
         }
 
+        // ------------------------------------------------------------ scope
+        static Texture2D _scopeMask;
+
+        /// <summary>
+        /// Sight picture for a magnified optic: an opaque surround with a round
+        /// hole punched in it, an etched mil-dot reticle, and a tube that irises
+        /// in as the shooter settles behind the glass.
+        /// </summary>
+        static void DrawScope(GameRun run, float w, float h, float t)
+        {
+            float cx = w * 0.5f, cy = h * 0.5f;
+            float shortSide = Mathf.Min(w, h);
+            float radius = shortSide * (0.62f - 0.20f * Mathf.Clamp01(t));
+            float alpha = Mathf.Clamp01((t - 0.35f) / 0.5f);
+            if (alpha <= 0.001f) return;
+
+            var sway = run.viewModel.ScopeSway;
+            float ox = sway.x * shortSide * 0.035f;
+            float oy = -sway.y * shortSide * 0.035f;
+            float l = cx + ox - radius, rgt = cx + ox + radius;
+            float top = cy + oy - radius, bot = cy + oy + radius;
+            var black = new Color(0f, 0f, 0f, alpha);
+
+            // Everything outside the tube's bounding square is solid.
+            UiKit.Fill(new Rect(0, 0, w, Mathf.Max(0, top)), black);
+            UiKit.Fill(new Rect(0, Mathf.Min(h, bot), w, Mathf.Max(0, h - bot)), black);
+            UiKit.Fill(new Rect(0, Mathf.Max(0, top), Mathf.Max(0, l), Mathf.Min(h, bot) - Mathf.Max(0, top)), black);
+            UiKit.Fill(new Rect(Mathf.Min(w, rgt), Mathf.Max(0, top), Mathf.Max(0, w - rgt),
+                Mathf.Min(h, bot) - Mathf.Max(0, top)), black);
+            // ...and the corners of that square are masked into a circle.
+            GUI.color = new Color(1f, 1f, 1f, alpha);
+            GUI.DrawTexture(new Rect(l, top, radius * 2f, radius * 2f), ScopeMask());
+            GUI.color = Color.white;
+
+            // Reticle: heavy posts, fine centre cross, mil dots down and across.
+            var etch = new Color(0.04f, 0.06f, 0.04f, alpha);
+            float post = Mathf.Max(2f, radius * 0.013f);
+            float gap = radius * 0.18f;
+            UiKit.Fill(new Rect(l, cy + oy - post * 0.5f, radius - gap, post), etch);
+            UiKit.Fill(new Rect(cx + ox + gap, cy + oy - post * 0.5f, radius - gap, post), etch);
+            UiKit.Fill(new Rect(cx + ox - post * 0.5f, top, post, radius - gap), etch);
+            UiKit.Fill(new Rect(cx + ox - post * 0.5f, cy + oy + gap, post, radius - gap), etch);
+            float fine = Mathf.Max(1f, post * 0.35f);
+            UiKit.Fill(new Rect(cx + ox - gap, cy + oy - fine * 0.5f, gap * 2f, fine), etch);
+            UiKit.Fill(new Rect(cx + ox - fine * 0.5f, cy + oy - gap, fine, gap * 2f), etch);
+            float dot = Mathf.Max(2f, radius * 0.008f);
+            for (int i = 1; i <= 4; i++)
+            {
+                float d = gap + i * radius * 0.16f;
+                UiKit.Fill(new Rect(cx + ox - dot, cy + oy + d - dot, dot * 2f, dot * 2f), etch);
+                UiKit.Fill(new Rect(cx + ox - d - dot, cy + oy - dot, dot * 2f, dot * 2f), etch);
+                UiKit.Fill(new Rect(cx + ox + d - dot, cy + oy - dot, dot * 2f, dot * 2f), etch);
+            }
+        }
+
+        /// <summary>Square texture: transparent inside a circle, opaque outside.</summary>
+        static Texture2D ScopeMask()
+        {
+            if (_scopeMask != null) return _scopeMask;
+            const int N = 256;
+            var tex = new Texture2D(N, N, TextureFormat.RGBA32, false);
+            tex.wrapMode = TextureWrapMode.Clamp;
+            var px = new Color32[N * N];
+            float c = (N - 1) * 0.5f;
+            for (int y = 0; y < N; y++)
+            {
+                for (int x = 0; x < N; x++)
+                {
+                    float d = Mathf.Sqrt((x - c) * (x - c) + (y - c) * (y - c)) / c;
+                    // A pixel of feather so the rim does not stair-step.
+                    float a = Mathf.Clamp01((d - 1f) * N * 0.5f + 0.5f);
+                    px[y * N + x] = new Color32(0, 0, 0, (byte)(a * 255f));
+                }
+            }
+            tex.SetPixels32(px);
+            tex.Apply();
+            _scopeMask = tex;
+            return tex;
+        }
+
         static void DrawPrompt(Prompt p, float cx, float cy)
         {
-            float w = UiKit.Px(420), h = UiKit.Px(p.sub != null && p.sub.Length > 0 ? 78 : 56);
+            bool hasSub = !string.IsNullOrEmpty(p.sub);
+            float w = UiKit.Px(420);
+            float h = UiKit.Px(56 + (p.hasCost ? 22 : 0) + (hasSub ? 24 : 0));
             var r = new Rect(cx - w * 0.5f, cy + UiKit.Px(62), w, h);
             UiKit.Fill(r, new Color(0.02f, 0.035f, 0.03f, 0.82f));
             UiKit.Frame(r, p.blocked ? UiKit.Blood : new Color(0.62f, 0.85f, 0.23f, 0.45f), UiKit.Px(1));
@@ -165,10 +254,18 @@ namespace Rotgrid
             GUI.Label(new Rect(x, r.y + UiKit.Px(8), r.width - UiKit.Px(50), UiKit.Px(26)), p.text,
                 UiKit.TextBold(15, UiKit.Ink, TextAnchor.MiddleLeft));
 
-            string sub = p.hasCost ? Util.FormatNumber(p.cost) + " POINTS" : p.sub;
-            if (!string.IsNullOrEmpty(sub))
-                GUI.Label(new Rect(r.x, r.y + UiKit.Px(34), r.width, UiKit.Px(22)), sub,
+            // Price and description both show — you should not have to buy a perk
+            // to find out what it does.
+            float sy = r.y + UiKit.Px(34);
+            if (p.hasCost)
+            {
+                GUI.Label(new Rect(r.x, sy, r.width, UiKit.Px(22)), Util.FormatNumber(p.cost) + " POINTS",
                     UiKit.Text(12, p.blocked ? UiKit.Blood : UiKit.Acid, TextAnchor.MiddleCenter));
+                sy += UiKit.Px(20);
+            }
+            if (hasSub)
+                GUI.Label(new Rect(r.x + UiKit.Px(14), sy, r.width - UiKit.Px(28), UiKit.Px(24)), p.sub,
+                    UiKit.Text(11, new Color(0.88f, 0.92f, 0.84f, 0.72f), TextAnchor.MiddleCenter));
 
             if (p.hasHold)
             {

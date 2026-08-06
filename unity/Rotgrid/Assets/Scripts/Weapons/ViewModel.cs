@@ -10,14 +10,16 @@ namespace Rotgrid
     public class ViewModel
     {
         // Poses, tuned for the narrower view-model field of view below.
-        static readonly Vector3 Hip = new Vector3(0.2f, -0.185f, 0.44f);
-        static readonly Vector3 Sprint = new Vector3(0.26f, -0.26f, 0.4f);
-        static readonly Vector3 Reload = new Vector3(0.23f, -0.33f, 0.42f);
-        static readonly Vector3 Down = new Vector3(0.22f, -0.46f, 0.4f);
+        static readonly Vector3 Hip = new Vector3(0.13f, -0.105f, 0.36f);
+        static readonly Vector3 Sprint = new Vector3(0.185f, -0.2f, 0.31f);
+        static readonly Vector3 Reload = new Vector3(0.16f, -0.25f, 0.33f);
+        static readonly Vector3 Down = new Vector3(0.17f, -0.38f, 0.3f);
 
         const float VmFov = 65f;
-        // Guns read better slightly under life size in a 65-degree view.
-        const float VmScale = 0.66f;
+        // Well under life size. With true firearm proportions anything near 1:1
+        // fills half the screen in a 65-degree view; this keeps a 1.4 m bolt gun
+        // readable in frame.
+        const float VmScale = 0.48f;
 
         public readonly Camera camera;
         public readonly Transform holder;
@@ -32,10 +34,30 @@ namespace Rotgrid
         Vector3 _muzzleLocal;
 
         float _adsT, _bobT, _meleeT, _swapT, _flashT;
+        float _sprintT, _reloadT, _downT;
         float _recoilPos, _recoilVel;
         Vector2 _sway;
+        bool _knifeOut;
 
         public float AdsT { get { return _adsT; } }
+
+        /// <summary>How far the world camera should zoom while aiming this weapon.</summary>
+        public float AdsZoom
+        {
+            get
+            {
+                float m = _info != null ? _info.opticMagnification : 1f;
+                return Mathf.Max(1.39f, m * 1.1f);
+            }
+        }
+
+        /// <summary>True while a magnified optic owns the screen.</summary>
+        public bool Scoped { get { return _info != null && _info.scoped && !_knifeOut; } }
+
+        /// <summary>Scope-in progress, 0 when this weapon has no tube optic.</summary>
+        public float ScopeT { get { return Scoped ? _adsT : 0f; } }
+
+        public Vector2 ScopeSway { get { return _sway; } }
 
         public ViewModel(Camera worldCamera, int layer)
         {
@@ -113,9 +135,14 @@ namespace Rotgrid
             _info = _model.GetComponent<WeaponModelInfo>();
             SetLayerRecursive(_model, layer);
 
-            float sh = (_info != null ? _info.sightHeight : 0.09f) * VmScale;
-            _adsOffset = new Vector3(0f, -sh - 0.015f, 0.34f);
-            _muzzleLocal = (_info != null ? _info.muzzle : new Vector3(0, 0.012f, 0.5f)) * VmScale;
+            // Hang the model off its grip so weapons of wildly different length
+            // all sit in the hand rather than being centred on their receivers.
+            Vector3 anchor = _info != null ? _info.gripAnchor : Vector3.zero;
+            _model.transform.localPosition = -anchor * VmScale;
+
+            float sh = ((_info != null ? _info.sightHeight : 0.09f) - anchor.y) * VmScale;
+            _adsOffset = new Vector3(0f, -sh - 0.012f, 0.3f);
+            _muzzleLocal = ((_info != null ? _info.muzzle : new Vector3(0, 0.012f, 0.5f)) - anchor) * VmScale;
             _flash.transform.localPosition = _muzzleLocal;
             _flashLight.transform.localPosition = _muzzleLocal;
             _swapT = 1f;
@@ -123,6 +150,7 @@ namespace Rotgrid
 
         public void ShowKnife(bool on)
         {
+            _knifeOut = on;
             _knife.SetActive(on);
             if (_model != null) _model.SetActive(!on);
         }
@@ -150,13 +178,18 @@ namespace Rotgrid
             float adsLambda = weapon != null ? 1f / Mathf.Max(0.06f, weapon.def.adsTime * 0.42f) : 12f;
             _adsT = Util.Damp(_adsT, ads ? 1f : 0f, adsLambda, dt);
 
-            Vector3 target = Hip;
-            if (reloading) target = Reload;
-            else if (sprinting && !ads) target = Sprint;
-            if (downed) target = Down;
+            // Every pose is a damped weight rather than a hard switch. Sprint in
+            // particular toggles on and off around the stamina floor, and swapping
+            // the target vector outright made the gun strobe between two positions.
+            _sprintT = Util.Damp(_sprintT, (sprinting && !ads && !reloading && !downed) ? 1f : 0f, 9f, dt);
+            _reloadT = Util.Damp(_reloadT, (reloading && !downed) ? 1f : 0f, 11f, dt);
+            _downT = Util.Damp(_downT, downed ? 1f : 0f, 7f, dt);
 
-            Vector3 basePos = target;
-            if (_adsT > 0.001f && !reloading) basePos = Vector3.Lerp(target, _adsOffset, _adsT);
+            Vector3 basePos = Hip;
+            if (_sprintT > 0.001f) basePos = Vector3.Lerp(basePos, Sprint, _sprintT);
+            if (_reloadT > 0.001f) basePos = Vector3.Lerp(basePos, Reload, _reloadT);
+            if (_adsT > 0.001f) basePos = Vector3.Lerp(basePos, _adsOffset, _adsT * (1f - _reloadT));
+            if (_downT > 0.001f) basePos = Vector3.Lerp(basePos, Down, _downT);
 
             _bobT += dt * (sprinting ? 12f : 8.5f) * Mathf.Clamp(moving, 0f, 1.4f);
             float bobScale = (1f - _adsT * 0.82f) * Mathf.Clamp01(moving);
@@ -187,11 +220,11 @@ namespace Rotgrid
                 basePos.y + by + _sway.y - swapDip - rec * 0.05f,
                 basePos.z + rec * 0.09f + meleeZ);
 
-            float reloadTilt = reloading ? Mathf.Sin(Time.time * 12f) * 0.05f : 0f;
+            float reloadTilt = Mathf.Sin(Time.time * 12f) * 0.05f * _reloadT;
             holder.localRotation = Quaternion.Euler(
                 (-rec * 0.5f + _sway.y * 1.6f + reloadTilt - meleeRot * 0.4f) * Mathf.Rad2Deg,
-                (-_sway.x * 2.6f + (reloading ? 0.45f : 0f) + meleeRot * 0.5f) * Mathf.Rad2Deg,
-                (_sway.x * 1.4f + (sprinting && !ads ? 0.28f : 0f) + (downed ? 0.4f : 0f) + meleeRot * 0.6f) * Mathf.Rad2Deg);
+                (-_sway.x * 2.6f + _reloadT * 0.45f + meleeRot * 0.5f) * Mathf.Rad2Deg,
+                (_sway.x * 1.4f + _sprintT * 0.28f + _downT * 0.4f + meleeRot * 0.6f) * Mathf.Rad2Deg);
 
             if (_flashT > 0f)
             {
@@ -221,6 +254,9 @@ namespace Rotgrid
                     if (e != null) Art.SetEmission(e.material, Util.Hex(0x66d9ff) * k);
             }
 
+            // Behind a magnified optic the weapon is out of the sight picture,
+            // so it is not drawn at all once the scope has taken over the screen.
+            camera.enabled = !(Scoped && _adsT > 0.72f);
             camera.fieldOfView = VmFov - _adsT * 8f;
         }
 

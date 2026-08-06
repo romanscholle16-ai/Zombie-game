@@ -72,6 +72,33 @@ namespace Rotgrid
             return m;
         }
 
+        /// <summary>
+        /// Flat unlit colour. Used where a surface must ignore scene lighting and
+        /// fog entirely — the alcove backdrop behind a barricade, for one.
+        /// </summary>
+        public static Material Unlit(string key, Color color, Texture2D map = null)
+        {
+            Material m;
+            if (_mat.TryGetValue(key, out m)) return m;
+            var sh = Shader.Find("Unlit/Texture") ?? Shader.Find("Unlit/Color") ?? LitShader;
+            m = new Material(sh);
+            m.name = key;
+            SetColor(m, color);
+            if (map != null)
+            {
+                m.mainTexture = map;
+                if (m.HasProperty("_BaseMap")) m.SetTexture("_BaseMap", map);
+            }
+            else if (m.HasProperty("_MainTex"))
+            {
+                // Unlit/Texture multiplies by the texture; give it a white one so
+                // the tint above is what actually shows.
+                m.mainTexture = Texture2D.whiteTexture;
+            }
+            _mat[key] = m;
+            return m;
+        }
+
         /// <summary>Emissive panel material used for signage, strips and machines.</summary>
         public static Material Emissive(string key, Color color, float strength = 2f, Texture2D map = null)
         {

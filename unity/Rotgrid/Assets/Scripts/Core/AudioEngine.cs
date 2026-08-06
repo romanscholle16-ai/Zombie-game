@@ -24,6 +24,8 @@ namespace Rotgrid
         const int Voices = 24;
 
         readonly Dictionary<Sfx, AudioClip[]> _clips = new Dictionary<Sfx, AudioClip[]>();
+        // Per-weapon shot clips, baked the first time each weapon is fired.
+        readonly Dictionary<string, AudioClip[]> _shotClips = new Dictionary<string, AudioClip[]>();
         readonly List<AudioSource> _pool = new List<AudioSource>();
         AudioSource _ui;
         AudioSource _ambient;
@@ -99,6 +101,27 @@ namespace Rotgrid
             src.pitch = pitch;
             src.volume = volume * GameSettings.SfxVolume;
             src.Play();
+        }
+
+        /// <summary>
+        /// Fires a weapon's own voice rather than one of five shared categories.
+        /// Clips are baked lazily — three variants each so repeat fire does not
+        /// machine-gun the identical waveform.
+        /// </summary>
+        public void PlayShot(WeaponDef def, float volume = 1f)
+        {
+            if (def == null || _ui == null) return;
+            AudioClip[] variants;
+            string key = def.id + "#" + def.upgradeLevel;
+            if (!_shotClips.TryGetValue(key, out variants))
+            {
+                var voice = WeaponVoices.For(def);
+                variants = Variants(3, i => Shot(voice));
+                _shotClips[key] = variants;
+            }
+            if (variants.Length == 0) return;
+            _ui.pitch = 1f;
+            _ui.PlayOneShot(variants[Random.Range(0, variants.Length)], volume * GameSettings.SfxVolume);
         }
 
         AudioClip Get(Sfx id)
@@ -206,6 +229,107 @@ namespace Rotgrid
                 float a = Mathf.Clamp01(cutoff / (Rate * 0.5f));
                 y += a * (x - y);
                 return y;
+            }
+        }
+
+        /// <summary>
+        /// A gunshot, layered: an optional capacitor charge, the action working,
+        /// the supersonic crack, the pressure body, a resonant peak that carries
+        /// the weapon's character, and the room answering back.
+        /// </summary>
+        static float[] Shot(WeaponVoice v)
+        {
+            float pre = v.chargeDur > 0f ? v.chargeDur : 0f;
+            float dur = v.Length + pre;
+            int n = Mathf.RoundToInt(Rate * dur);
+            int start = Mathf.RoundToInt(Rate * pre);
+            var buf = new float[n];
+
+            var crackLp = new Lp();
+            var ringBp = new Lp();
+            var ringHp = new Lp();
+            var tailLp = new Lp();
+            var mechBp = new Lp();
+            var mechHp = new Lp();
+            float bodyPhase = 0f, chargePhase = 0f;
+            float jitter = 1f + (Random.value - 0.5f) * 0.06f;
+
+            // ---- capacitor charge, for the weapons that have one
+            for (int i = 0; i < start; i++)
+            {
+                float t = (float)i / Mathf.Max(1, start);
+                float f = Mathf.Lerp(v.chargeFrom, v.chargeTo, t * t);
+                chargePhase += f / Rate;
+                float saw = Mathf.Repeat(chargePhase, 1f) * 2f - 1f;
+                buf[i] = Mathf.Clamp(saw * v.chargeLevel * Mathf.Pow(t, 1.6f), -1f, 1f);
+            }
+
+            for (int i = start; i < n; i++)
+            {
+                float e = (float)(i - start) / Rate;      // seconds since the shot
+                float sample = 0f;
+
+                // ---- mechanical action
+                if (v.mech > 0.001f && e < v.mechDur)
+                {
+                    float t = e / v.mechDur;
+                    float raw = Noise();
+                    float band = mechBp.Step(raw, v.mechF * jitter) - mechHp.Step(raw, v.mechF * 0.45f);
+                    sample += band * v.mech * Mathf.Exp(-t * 7f);
+                }
+
+                // ---- crack, sweeping down as the bullet leaves
+                if (e < v.crackDur)
+                {
+                    float t = e / v.crackDur;
+                    float cutoff = Mathf.Lerp(v.crackHi * jitter, v.crackLo, t);
+                    float env = Mathf.Exp(-t * (7f + v.crackQ * 2f));
+                    sample += crackLp.Step(Noise(), cutoff) * env * v.crackLevel;
+                }
+
+                // ---- body: the pressure pulse
+                if (e < v.bodyDur)
+                {
+                    float t = e / v.bodyDur;
+                    float bf = Mathf.Lerp(v.body * v.bodyMul * jitter, v.body * 0.5f, t);
+                    bodyPhase += bf / Rate;
+                    float w = Wave(v.bodyShape, bodyPhase);
+                    sample += w * Mathf.Exp(-t * 9f) * v.punch * 0.45f;
+                }
+
+                // ---- ring: barrel harmonic, receiver clang or capacitor whine
+                if (v.ring > 0.001f && e < v.ringDur)
+                {
+                    float t = e / v.ringDur;
+                    float raw = Noise();
+                    float band = ringBp.Step(raw, v.ringF * jitter) - ringHp.Step(raw, v.ringF * 0.7f);
+                    sample += band * v.ring * Mathf.Exp(-t * (3f + 12f / Mathf.Max(1f, v.ringQ)));
+                }
+
+                // ---- tail
+                if (v.tail > 0.001f && e < v.tailDur)
+                {
+                    float t = e / v.tailDur;
+                    float cutoff = Mathf.Lerp(v.tailF, Mathf.Max(90f, v.tailF * 0.25f), t);
+                    float env = Mathf.Min(1f, t * 24f) * Mathf.Exp(-t * 4.5f);
+                    sample += tailLp.Step(Noise(), cutoff) * env * v.tail * 0.32f;
+                }
+
+                buf[i] = Mathf.Clamp(sample, -1f, 1f);
+            }
+            return buf;
+        }
+
+        /// <summary>Body oscillator shape: 0 triangle, 1 sine, 2 saw, 3 square.</summary>
+        static float Wave(int shape, float phase)
+        {
+            float p = Mathf.Repeat(phase, 1f);
+            switch (shape)
+            {
+                case 1: return Mathf.Sin(p * Mathf.PI * 2f);
+                case 2: return p * 2f - 1f;
+                case 3: return p < 0.5f ? 1f : -1f;
+                default: return 1f - 4f * Mathf.Abs(p - 0.5f);
             }
         }
 

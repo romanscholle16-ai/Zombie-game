@@ -227,35 +227,91 @@ namespace Rotgrid
             return g;
         }
 
+        /// <summary>
+        /// Perk dispenser: a battered vending cabinet with a lit marquee, a rack
+        /// of bottles behind scratched glass, a dispense tray at waist height and
+        /// a kick plate that has seen better decades.
+        /// </summary>
         public static GameObject PerkMachine(PerkDef perk, Transform parent)
         {
             var g = new GameObject("perk_" + perk.id);
             g.transform.SetParent(parent, false);
-            var body = Art.Lit("m_perk" + perk.id, perk.Color, 0.35f, 0.3f);
-            Box(1.15f, 2.1f, 0.9f, body, new Vector3(0, 1.05f, 0), g.transform);
-            Box(1.25f, 0.14f, 1.0f, DarkMetal, new Vector3(0, 2.12f, 0), g.transform);
-            Box(1.25f, 0.12f, 1.0f, DarkMetal, new Vector3(0, 0.06f, 0), g.transform);
-
+            var T = g.transform;
+            var shell = Art.Lit("m_perkShell" + perk.id, perk.Color, 0.48f, 0.42f, Art.MetalPanel());
+            var dark = Art.Lit("m_perkDark", Util.Hex(0x181d20), 0.3f, 0.45f);
             var glowMat = Art.Emissive("em_perk" + perk.id, perk.Color, 1.8f);
+
+            const float W = 1.18f, H = 2.24f, D = 0.86f;
+
+            // ---- carcass: back, sides and a chamfered top
+            Box(W, H, 0.1f, shell, new Vector3(0, H * 0.5f, -D * 0.5f + 0.05f), T);
+            Box(0.11f, H, D, shell, new Vector3(-(W * 0.5f - 0.055f), H * 0.5f, 0), T);
+            Box(0.11f, H, D, shell, new Vector3(W * 0.5f - 0.055f, H * 0.5f, 0), T);
+            Box(W, 0.12f, D, dark, new Vector3(0, H - 0.06f, 0), T);
+            Box(W * 0.99f, 0.5f, D * 0.62f, shell, new Vector3(0, H - 0.34f, -D * 0.16f), T);
+
+            // ---- plinth and kick plate
+            Box(W + 0.08f, 0.16f, D + 0.06f, dark, new Vector3(0, 0.08f, 0), T);
+            Box(W * 0.9f, 0.2f, 0.04f, Rust, new Vector3(0, 0.26f, D * 0.5f - 0.01f), T);
+
             var info = g.AddComponent<MachineInfo>();
+
+            // ---- lit marquee across the crown
+            var marquee = Quad(W * 0.86f, 0.34f, Art.Emissive("sign_perk" + perk.id, Color.white, 1.4f,
+                PixelFont.Sign(perk.shortName, perk.cost + " PTS", perk.Color, Util.Hex(0x0a0c0a), 256, 128)),
+                new Vector3(0, H - 0.3f, D * 0.5f - 0.02f), T);
+            marquee.transform.localRotation = Quaternion.Euler(0, 180f, 0);
+            var mf1 = Box(W * 0.92f, 0.05f, 0.05f, glowMat, new Vector3(0, H - 0.13f, D * 0.5f - 0.02f), T);
+            var mf2 = Box(W * 0.92f, 0.05f, 0.05f, glowMat, new Vector3(0, H - 0.47f, D * 0.5f - 0.02f), T);
+
+            // ---- display window: bottle rack behind glass. The backing panel
+            // sits behind the bottles, not in front of them.
+            Box(W * 0.82f, 0.94f, 0.06f, Art.Lit("m_perkBay", Util.Hex(0x0b0e10), 0f),
+                new Vector3(0, 1.34f, D * 0.5f - 0.36f), T);
+            var bottleMat = Art.Emissive("em_perkRack" + perk.id, perk.Color, 0.9f);
+            for (int row = 0; row < 2; row++)
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    Cyl(0.058f, 0.24f, bottleMat, new Vector3(-0.3f + i * 0.2f, 1.06f + row * 0.44f, D * 0.5f - 0.19f), T);
+                    Cyl(0.026f, 0.06f, dark, new Vector3(-0.3f + i * 0.2f, 1.21f + row * 0.44f, D * 0.5f - 0.19f), T);
+                }
+                Box(W * 0.8f, 0.02f, 0.14f, dark, new Vector3(0, 0.93f + row * 0.44f, D * 0.5f - 0.19f), T);
+            }
+            Quad(W * 0.82f, 0.96f, Art.Lit("m_perkGlass", new Color(0.74f, 0.85f, 0.9f, 0.19f), 0.9f, 0.2f),
+                new Vector3(0, 1.34f, D * 0.5f - 0.008f), T)
+                .transform.localRotation = Quaternion.Euler(0, 180f, 0);
+            Box(W * 0.86f, 0.05f, 0.06f, dark, new Vector3(0, 1.84f, D * 0.5f - 0.01f), T);
+            Box(W * 0.86f, 0.05f, 0.06f, dark, new Vector3(0, 0.84f, D * 0.5f - 0.01f), T);
+            Box(0.05f, 1.04f, 0.06f, dark, new Vector3(-W * 0.42f, 1.34f, D * 0.5f - 0.01f), T);
+            Box(0.05f, 1.04f, 0.06f, dark, new Vector3(W * 0.42f, 1.34f, D * 0.5f - 0.01f), T);
+
+            // ---- selection buttons down the side of the glass
+            for (int i = 0; i < 3; i++)
+                Box(0.07f, 0.05f, 0.03f, i == 1 ? glowMat : dark,
+                    new Vector3(W * 0.33f, 0.72f - i * 0.09f, D * 0.5f - 0.01f), T);
+
+            // ---- dispense tray, and the bottle that drops into it
+            Box(W * 0.56f, 0.3f, 0.16f, Art.Lit("m_perkslot", Util.Hex(0x07090a), 0f),
+                new Vector3(0, 0.58f, D * 0.5f - 0.06f), T);
+            Box(W * 0.6f, 0.04f, 0.2f, dark, new Vector3(0, 0.42f, D * 0.5f - 0.04f), T);
+            Box(W * 0.52f, 0.24f, 0.02f, dark, new Vector3(0, 0.6f, D * 0.5f + 0.02f), T);
+            var bottle = Cyl(0.062f, 0.26f, Art.Emissive("em_bottle" + perk.id, perk.Color, 1.4f),
+                new Vector3(0, 0.62f, D * 0.5f - 0.04f), T);
+            bottle.SetActive(false);
+
+            // ---- accent light bars up the corners
+            var barL = Box(0.05f, 1.5f, 0.05f, glowMat, new Vector3(-W * 0.5f + 0.03f, 1.2f, D * 0.5f - 0.06f), T);
+            var barR = Box(0.05f, 1.5f, 0.05f, glowMat, new Vector3(W * 0.5f - 0.03f, 1.2f, D * 0.5f - 0.06f), T);
+
             info.glow = new[]
             {
-                Box(0.9f, 0.08f, 0.04f, glowMat, new Vector3(0, 0.95f, 0.47f), g.transform).GetComponent<MeshRenderer>(),
-                Box(0.06f, 1.5f, 0.04f, glowMat, new Vector3(-0.6f, 1.2f, 0.3f), g.transform).GetComponent<MeshRenderer>(),
-                Box(0.06f, 1.5f, 0.04f, glowMat, new Vector3(0.6f, 1.2f, 0.3f), g.transform).GetComponent<MeshRenderer>(),
+                mf1.GetComponent<MeshRenderer>(), mf2.GetComponent<MeshRenderer>(),
+                barL.GetComponent<MeshRenderer>(), barR.GetComponent<MeshRenderer>(),
+                marquee.GetComponent<MeshRenderer>(),
             };
-
-            var panel = Quad(0.85f, 0.55f, Art.Emissive("sign_perk" + perk.id, Color.white, 1.4f,
-                PixelFont.Sign(perk.shortName, perk.cost.ToString(), perk.Color, Util.Hex(0x0a0c0a), 256, 128)),
-                new Vector3(0, 1.5f, 0.47f), g.transform);
-            panel.transform.localRotation = Quaternion.Euler(0, 180f, 0);
-
-            Box(0.5f, 0.28f, 0.14f, Art.Lit("m_perkslot", Util.Hex(0x0a0c0a), 0f), new Vector3(0, 0.62f, 0.45f), g.transform);
-            var bottle = Cyl(0.1f, 0.3f, Art.Emissive("em_bottle" + perk.id, perk.Color, 1.4f),
-                new Vector3(0, 0.66f, 0.45f), g.transform);
-            bottle.SetActive(false);
             info.bottle = bottle;
-            info.colliderSize = new Vector3(1.25f, 2.2f, 1.0f);
+            info.colliderSize = new Vector3(W + 0.1f, H, D + 0.06f);
             return g;
         }
 
@@ -295,31 +351,78 @@ namespace Rotgrid
             return g;
         }
 
+        /// <summary>
+        /// Weapon upgrade machine. Reads as a repurposed industrial press: a
+        /// heavy armoured cabinet, a hooded intake you feed a weapon into,
+        /// hydraulic rams either side, a hazard-striped apron and extraction
+        /// ducting stacked over the top.
+        /// </summary>
         public static GameObject UpgradeMachine(Transform parent)
         {
             var g = new GameObject("refit");
             g.transform.SetParent(parent, false);
-            Box(2.6f, 2.6f, 1.6f, Metal, new Vector3(0, 1.3f, 0), g.transform);
-            Box(2.8f, 0.2f, 1.8f, DarkMetal, new Vector3(0, 2.62f, 0), g.transform);
-            Box(2.8f, 0.18f, 1.8f, DarkMetal, new Vector3(0, 0.09f, 0), g.transform);
-            Box(1.5f, 0.5f, 0.3f, Art.Lit("m_papslot", Util.Hex(0x070907), 0f), new Vector3(0, 1.35f, 0.78f), g.transform);
+            var T = g.transform;
+            var shell = Art.Lit("m_papShell", Util.Hex(0x6b6f74), 0.45f, 0.7f, Art.MetalPanel());
+            var hot = Art.Emissive("em_pap", Util.Hex(0xff8a3d), 2.4f);
+            const float W = 2.7f, H = 2.75f, D = 1.7f;
 
-            var glowMat = Art.Emissive("em_pap", Util.Hex(0xff8a3d), 2.4f);
-            var throat = Box(1.4f, 0.42f, 0.06f, glowMat, new Vector3(0, 1.35f, 0.87f), g.transform);
-            var ring = Cyl(0.62f, 0.06f, glowMat, new Vector3(0, 1.35f, 0.92f), g.transform);
-            ring.transform.localRotation = Quaternion.Euler(90f, 0, 0);
+            // ---- carcass with a chamfered hood
+            Box(W, H * 0.78f, D, shell, new Vector3(0, H * 0.39f + 0.16f, 0), T);
+            Box(W + 0.16f, 0.22f, D + 0.16f, DarkMetal, new Vector3(0, 0.11f, 0), T);
+            Box(W + 0.1f, 0.2f, D + 0.1f, DarkMetal, new Vector3(0, H * 0.78f + 0.26f, 0), T);
+            var hood = Box(W * 0.94f, 0.46f, D * 0.7f, shell, new Vector3(0, H - 0.2f, D * 0.12f), T);
+            hood.transform.localRotation = Quaternion.Euler(-12.6f, 0, 0);
 
-            var pipes = PipeRun(2.4f, 5, g.transform);
-            pipes.transform.localPosition = new Vector3(0, 2.35f, -0.5f);
+            // ---- hazard apron along the base, where you stand
+            Box(W * 0.98f, 0.26f, 0.06f, HazardMat, new Vector3(0, 0.35f, D * 0.5f + 0.02f), T);
 
-            var sign = Quad(2.0f, 0.6f, Art.Emissive("sign_pap", Color.white, 1.6f,
+            // ---- intake throat: recessed slot, glowing interior, iris ring
+            Box(1.62f, 0.62f, 0.34f, Art.Lit("m_papslot", Util.Hex(0x060807), 0f),
+                new Vector3(0, 1.38f, D * 0.5f - 0.06f), T);
+            var throat = Box(1.46f, 0.46f, 0.06f, hot, new Vector3(0, 1.38f, D * 0.5f + 0.03f), T);
+            var iris = Cyl(0.66f, 0.06f, hot, new Vector3(0, 1.38f, D * 0.5f + 0.07f), T);
+            iris.transform.localRotation = Quaternion.Euler(90f, 0, 0);
+            for (int s2 = -1; s2 <= 1; s2 += 2)
+            {
+                var roller = Cyl(0.05f, 1.3f, DarkMetal, new Vector3(0, 1.38f + s2 * 0.26f, D * 0.5f - 0.02f), T);
+                roller.transform.localRotation = Quaternion.Euler(0, 0, 90f);
+            }
+
+            // ---- hydraulic rams either side of the intake
+            var rod = Art.Lit("m_papRod", Util.Hex(0xd2d8dc), 0.8f, 0.95f);
+            for (int s2 = -1; s2 <= 1; s2 += 2)
+            {
+                Cyl(0.13f, 1.2f, DarkMetal, new Vector3(s2 * 1.12f, 1.5f, D * 0.2f), T);
+                Cyl(0.08f, 0.5f, rod, new Vector3(s2 * 1.12f, 2.2f, D * 0.2f), T);
+                Box(0.34f, 0.12f, 0.34f, DarkMetal, new Vector3(s2 * 1.12f, 2.44f, D * 0.2f), T);
+            }
+
+            // ---- gauges and a control box on the cheeks
+            var gaugeMat = Art.Lit("m_papGauge", Util.Hex(0x11161a), 0.5f, 0.6f);
+            for (int i = 0; i < 3; i++)
+            {
+                var gauge = Cyl(0.09f, 0.05f, gaugeMat, new Vector3(-0.95f + i * 0.3f, 0.82f, D * 0.5f + 0.01f), T);
+                gauge.transform.localRotation = Quaternion.Euler(90f, 0, 0);
+                Box(0.02f, 0.06f, 0.02f, hot, new Vector3(-0.95f + i * 0.3f, 0.84f, D * 0.5f + 0.04f), T);
+            }
+            Box(0.44f, 0.5f, 0.14f, DarkMetal, new Vector3(1.0f, 0.85f, D * 0.5f - 0.02f), T);
+            Box(0.3f, 0.16f, 0.04f, hot, new Vector3(1.0f, 0.98f, D * 0.5f + 0.05f), T);
+
+            // ---- extraction ducting off the back and over the top
+            var pipes = PipeRun(2.6f, 5, T);
+            pipes.transform.localPosition = new Vector3(0, H + 0.12f, -D * 0.28f);
+            for (int s2 = -1; s2 <= 1; s2 += 2)
+                Cyl(0.16f, 0.8f, Rust, new Vector3(s2 * 0.9f, H + 0.5f, -D * 0.28f), T);
+
+            // ---- signage
+            var sign = Quad(1.9f, 0.56f, Art.Emissive("sign_pap", Color.white, 1.6f,
                 PixelFont.Sign("REFIT", "INSERT WEAPON", Util.Hex(0xff8a3d), Util.Hex(0x0d0a08), 256, 96)),
-                new Vector3(0, 2.15f, 0.83f), g.transform);
-            sign.transform.localRotation = Quaternion.Euler(0, 180f, 0);
+                new Vector3(0, 2.16f, D * 0.5f + 0.06f), T);
+            sign.transform.localRotation = Quaternion.Euler(-12.6f, 180f, 0);
 
             var lightGo = new GameObject("papLight");
-            lightGo.transform.SetParent(g.transform, false);
-            lightGo.transform.localPosition = new Vector3(0, 1.8f, 1.2f);
+            lightGo.transform.SetParent(T, false);
+            lightGo.transform.localPosition = new Vector3(0, 1.8f, D * 0.5f + 0.7f);
             var l = lightGo.AddComponent<Light>();
             l.type = LightType.Point;
             l.color = Util.Hex(0xff8a3d);
@@ -327,10 +430,10 @@ namespace Rotgrid
             l.intensity = 0f;
 
             var info = g.AddComponent<MachineInfo>();
-            info.glow = new[] { throat.GetComponent<MeshRenderer>(), ring.GetComponent<MeshRenderer>() };
-            info.pivot = ring.transform;
+            info.glow = new[] { throat.GetComponent<MeshRenderer>(), iris.GetComponent<MeshRenderer>() };
+            info.pivot = iris.transform;
             info.light = l;
-            info.colliderSize = new Vector3(2.8f, 2.7f, 1.8f);
+            info.colliderSize = new Vector3(W + 0.2f, H, D + 0.2f);
             return g;
         }
 
@@ -461,80 +564,423 @@ namespace Rotgrid
         }
 
         // ------------------------------------------------------------ weapons
+        /// <summary>Cylinder lying along +z, which is how most gun parts run.</summary>
+        static GameObject CylZ(float r, float len, Material mat, Vector3 pos, Transform parent)
+        {
+            var go = Cyl(r, len, mat, pos, parent);
+            go.transform.localRotation = Quaternion.Euler(90f, 0, 0);
+            return go;
+        }
+
+        /// <summary>Ring of short bars — stands in for a torus without a mesh.</summary>
+        static GameObject Ring(float radius, float tube, Material mat, Vector3 pos, Transform parent, int seg = 14)
+        {
+            var g = new GameObject("ring");
+            g.transform.SetParent(parent, false);
+            g.transform.localPosition = pos;
+            float arc = Mathf.PI * 2f / seg;
+            float bar = radius * arc * 1.15f;
+            for (int i = 0; i < seg; i++)
+            {
+                float a = i * arc;
+                var b = Box(tube * 2f, bar, tube * 2f, mat,
+                    new Vector3(Mathf.Sin(a) * radius, Mathf.Cos(a) * radius, 0), g.transform);
+                b.transform.localRotation = Quaternion.Euler(0, 0, -a * Mathf.Rad2Deg);
+            }
+            return g;
+        }
+
+        /// <summary>A length of accessory rail: base strip plus recoil lugs.</summary>
+        static void RailSection(float len, Material mat, Vector3 pos, Transform parent)
+        {
+            var g = new GameObject("rail");
+            g.transform.SetParent(parent, false);
+            g.transform.localPosition = pos;
+            Box(0.019f, 0.007f, len, mat, Vector3.zero, g.transform);
+            int n = Mathf.Clamp(Mathf.RoundToInt(len / 0.024f), 2, 14);
+            for (int i = 0; i < n; i++)
+            {
+                float t = n == 1 ? 0.5f : (float)i / (n - 1);
+                Box(0.023f, 0.006f, 0.008f, mat,
+                    new Vector3(0, 0.006f, -len / 2 + 0.009f + t * (len - 0.018f)), g.transform);
+            }
+        }
+
+        /// <summary>Box magazine that curves forward as it drops, following its cartridges.</summary>
+        static GameObject CurvedMag(float len, float w, float d, Material mat, Vector3 pos, Transform parent, float curve)
+        {
+            var g = new GameObject("mag");
+            g.transform.SetParent(parent, false);
+            g.transform.localPosition = pos;
+            const int n = 6;
+            float seg = len / n;
+            float y = 0f, z = 0f;
+            for (int i = 0; i < n; i++)
+            {
+                float a = curve * ((float)i / n);
+                var s = Box(w * (1f - i * 0.015f), seg * 1.1f, d, mat,
+                    new Vector3(0, y - Mathf.Cos(a) * seg / 2f, z + Mathf.Sin(a) * seg / 2f), g.transform);
+                s.transform.localRotation = Quaternion.Euler(-a * Mathf.Rad2Deg, 0, 0);
+                y -= Mathf.Cos(a) * seg;
+                z += Mathf.Sin(a) * seg;
+            }
+            var fp = Box(w * 1.12f, 0.012f, d * 1.1f, mat, new Vector3(0, y + 0.004f, z), g.transform);
+            fp.transform.localRotation = Quaternion.Euler(-curve * Mathf.Rad2Deg, 0, 0);
+            return g;
+        }
+
+        /// <summary>Birdcage flash hider, ported brake, can, or a plain crown.</summary>
+        static void MuzzleDevice(string kind, float bore, Material mat, float z, Transform parent)
+        {
+            float r = Mathf.Max(0.011f, bore * 1.5f);
+            if (kind == "brake")
+            {
+                CylZ(r * 1.25f, 0.062f, mat, new Vector3(0, 0, z + 0.031f), parent);
+                for (int i = 0; i < 3; i++)
+                    for (int s = -1; s <= 1; s += 2)
+                        Box(0.006f, r * 2.2f, 0.007f, mat, new Vector3(s * r * 1.1f, 0, z + 0.014f + i * 0.016f), parent);
+            }
+            else if (kind == "suppressor")
+            {
+                CylZ(r * 2f, 0.16f, mat, new Vector3(0, 0, z + 0.08f), parent);
+                for (int i = 0; i < 4; i++)
+                    Ring(r * 2f, 0.004f, mat, new Vector3(0, 0, z + 0.03f + i * 0.036f), parent, 10);
+            }
+            else if (kind == "none")
+            {
+                CylZ(r * 1.05f, 0.02f, mat, new Vector3(0, 0, z + 0.01f), parent);
+            }
+            else
+            {
+                var slot = Art.Lit("m_gnslot", Util.Hex(0x0b0e10), 0.02f);
+                CylZ(r * 1.1f, 0.014f, mat, new Vector3(0, 0, z + 0.007f), parent);
+                CylZ(r * 1.35f, 0.048f, mat, new Vector3(0, 0, z + 0.038f), parent);
+                for (int i = 0; i < 5; i++)
+                {
+                    float a = -Mathf.PI * 0.35f + (i / 4f) * Mathf.PI * 0.7f;
+                    Box(0.005f, 0.005f, 0.03f, slot,
+                        new Vector3(Mathf.Sin(a) * r * 1.3f, Mathf.Cos(a) * r * 1.3f, z + 0.04f), parent);
+                }
+                Ring(r * 1.35f, 0.005f, mat, new Vector3(0, 0, z + 0.062f), parent, 12);
+            }
+        }
+
+        /// <summary>Swept pistol grip with a backstrap, plus trigger guard and trigger.</summary>
+        static void GripAssembly(Material mat, Material metal, Vector3 pos, Transform parent, float rake, float len, bool guard)
+        {
+            var g = new GameObject("grip");
+            g.transform.SetParent(parent, false);
+            g.transform.localPosition = pos;
+            const int n = 4;
+            for (int i = 0; i < n; i++)
+            {
+                float t = (float)i / n;
+                float off = len * (t + 0.5f / n);
+                var seg = Box(0.032f, len / n * 1.12f, 0.05f - t * 0.012f, mat,
+                    new Vector3(0, -off, -Mathf.Sin(rake) * off), g.transform);
+                seg.transform.localRotation = Quaternion.Euler(rake * 0.55f * Mathf.Rad2Deg, 0, 0);
+            }
+            Box(0.03f, 0.03f, 0.045f, mat, new Vector3(0, -0.012f, -0.018f), g.transform);
+            Box(0.034f, 0.012f, 0.05f, metal, new Vector3(0, -len - 0.005f, -Mathf.Sin(rake) * len), g.transform);
+            if (!guard) return;
+            // Trigger guard: a bowed row of links, plus the trigger inside it.
+            for (int i = 0; i < 7; i++)
+            {
+                float a = Mathf.PI * (0.1f + 0.8f * i / 6f);
+                Box(0.007f, 0.009f, 0.009f, metal,
+                    new Vector3(0, -0.028f - Mathf.Sin(a) * 0.026f, 0.031f - Mathf.Cos(a) * 0.026f), g.transform);
+            }
+            var tr = Box(0.008f, 0.026f, 0.007f, metal, new Vector3(0, -0.024f, 0.026f), g.transform);
+            tr.transform.localRotation = Quaternion.Euler(11f, 0, 0);
+        }
+
+        /// <summary>Telescoping stock on a buffer tube, with cheek weld and rubber pad.</summary>
+        static void CollapsibleStock(float len, Material mat, Material metal, Material rubber, float z, Transform parent)
+        {
+            CylZ(0.019f, len * 0.96f, metal, new Vector3(0, 0.004f, z - len * 0.48f), parent);
+            Box(0.044f, 0.062f, len * 0.46f, mat, new Vector3(0, -0.004f, z - len * 0.6f), parent);
+            Box(0.05f, 0.016f, len * 0.5f, mat, new Vector3(0, 0.032f, z - len * 0.58f), parent);
+            Box(0.03f, 0.03f, 0.012f, metal, new Vector3(0, -0.03f, z - len * 0.42f), parent);
+            Box(0.052f, 0.086f, 0.016f, rubber, new Vector3(0, -0.004f, z - len * 0.94f), parent);
+        }
+
+        /// <summary>One-piece stock with a wrist and comb — shotguns and bolt guns.</summary>
+        static void FixedStock(float len, Material mat, Material rubber, float z, float drop, Transform parent)
+        {
+            var wrist = Box(0.038f, 0.062f, len * 0.42f, mat, new Vector3(0, -0.018f, z - len * 0.2f), parent);
+            wrist.transform.localRotation = Quaternion.Euler(-5f, 0, 0);
+            var comb = Box(0.046f, 0.075f, len * 0.52f, mat, new Vector3(0, -drop, z - len * 0.66f), parent);
+            comb.transform.localRotation = Quaternion.Euler(-2f, 0, 0);
+            Box(0.05f, 0.026f, len * 0.4f, mat, new Vector3(0, -drop + 0.05f, z - len * 0.7f), parent);
+            Box(0.05f, 0.096f, 0.018f, rubber, new Vector3(0, -drop - 0.006f, z - len * 0.95f), parent);
+        }
+
         /// <summary>
-        /// Builds a chunky, readable weapon silhouette from its definition.
-        /// Used for the view model, wall buys, the crate reveal and the loadout.
+        /// Builds a weapon from the parts a real firearm has — receiver, magwell,
+        /// ejection port, charging handle, grip, handguard, gas block, muzzle
+        /// device, stock and sights. Forms are generic to their class; nothing
+        /// here reproduces any manufacturer's product, marking or trade dress.
+        ///
+        /// The bore runs along +z, up is +y, origin at the receiver centre.
         /// </summary>
         public static GameObject WeaponModel(WeaponDef def, float scale, Transform parent)
         {
             var g = new GameObject("weapon_" + def.id);
             g.transform.SetParent(parent, false);
             g.transform.localScale = Vector3.one * scale;
+            var T = g.transform;
 
-            // Lifted from the world tints so the gun still reads in a dark room.
-            Color bodyCol = Util.Lighten(def.Tint, 4.2f);
-            Color accentCol = Util.Lighten(def.Accent, 2.6f);
-            var body = Art.Lit("gunbody" + def.tint, bodyCol, 0.5f, 0.5f);
-            var grip = Art.Lit("gungrip", Util.Hex(0x4a5054), 0.1f, 0.05f);
-            var accent = Art.Lit("gunaccent" + def.accent, accentCol, 0.62f, 0.68f);
+            Color bodyCol = Util.Lighten(def.Tint, 3.6f);
+            Color accentCol = Util.Lighten(def.Accent, 2.3f);
+            var steel = Art.Lit("gnS" + def.tint, bodyCol, 0.6f, 0.8f);
+            var poly = Art.Lit("gnP" + def.tint, Util.Lighten(bodyCol, 0.72f), 0.22f, 0.05f);
+            var accent = Art.Lit("gnA" + def.accent, accentCol, 0.7f, 0.78f);
+            var grip = Art.Lit("gnGrip", Util.Hex(0x555c62), 0.05f, 0.03f);
+            var rubber = Art.Lit("gnRubber", Util.Hex(0x1d2124), 0.02f, 0f);
+            var wood = Art.Lit("gnWood", Util.Hex(0x7a5333), 0.4f, 0.02f);
 
-            float recW = def.recvW, recH = def.recvH, recL = def.recvL;
-            float barrel = def.barrelLen;
+            WeaponClass fam = def.cls;
+            bool revolver = def.revolver;
+            bool energy = fam == WeaponClass.Wonder;
+            bool handgun = fam == WeaponClass.Pistol || revolver;
+            var furniture = (fam == WeaponClass.Shotgun || def.wood) ? wood : poly;
 
-            Box(recW, recH, recL, body, Vector3.zero, g.transform);
-            var b = Cyl(def.bore, barrel, accent, new Vector3(0, 0.012f, recL / 2 + barrel / 2), g.transform);
-            b.transform.localRotation = Quaternion.Euler(90f, 0, 0);
-            if (def.hasGuard)
-                Box(recW * 0.86f, recH * 0.66f, barrel * 0.72f, body, new Vector3(0, -0.008f, recL / 2 + barrel * 0.34f), g.transform);
-
-            var gp = Box(0.072f, 0.16f, 0.09f, grip, new Vector3(0, -0.12f, -recL * 0.18f), g.transform);
-            gp.transform.localRotation = Quaternion.Euler(-16f, 0, 0);
+            // Real receivers are far narrower than they are tall; the old models
+            // were square in section, which is most of why they read as toys.
+            float W = Mathf.Min(def.recvW, 0.058f);
+            float H = def.recvH, D = def.recvL;
+            float bl = def.barrelLen, bore = def.bore;
+            float boreY = H * 0.16f;
+            float front = D / 2f;
 
             var info = g.AddComponent<WeaponModelInfo>();
-            if (def.hasMag)
+
+            // ---------------------------------------------------------- receiver
+            if (handgun)
             {
-                var mg = Box(0.07f, def.magLen, 0.075f, grip, new Vector3(0, -def.magLen / 2 - 0.05f, recL * 0.06f), g.transform);
-                mg.transform.localRotation = Quaternion.Euler(6f, 0, 0);
-                info.magazine = mg.transform;
-                info.magHome = mg.transform.localPosition;
+                Box(W, H * 0.5f, D, steel, new Vector3(0, boreY + H * 0.16f, 0), T);
+                Box(W * 0.72f, H * 0.34f, D * 0.86f, steel, new Vector3(0, boreY - H * 0.1f, -D * 0.02f), T);
+                for (int i = 0; i < 6; i++)
+                    Box(W * 1.02f, H * 0.34f, 0.005f, accent, new Vector3(0, boreY + H * 0.16f, -D * 0.42f + i * 0.011f), T);
+                Box(W * 1.04f, H * 0.16f, D * 0.2f, steel, new Vector3(0, boreY + H * 0.2f, D * 0.02f), T);
             }
-            if (def.hasStock)
+            else
             {
-                Box(0.07f, 0.11f, def.stockLen, body, new Vector3(0, -0.03f, -recL / 2 - def.stockLen / 2), g.transform);
-                Box(0.075f, 0.15f, 0.05f, grip, new Vector3(0, -0.03f, -recL / 2 - def.stockLen - 0.02f), g.transform);
+                Box(W, H * 0.46f, D, steel, new Vector3(0, boreY + H * 0.14f, 0), T);
+                Box(W * 0.98f, H * 0.06f, D * 0.98f, accent, new Vector3(0, boreY + H * 0.37f, 0), T);
+                Box(W * 0.94f, H * 0.4f, D * 0.82f, furniture, new Vector3(0, boreY - H * 0.16f, -D * 0.02f), T);
+                Box(W * 1.03f, H * 0.16f, D * 0.22f, Art.Lit("m_gnport", Util.Hex(0x0c0f11), 0.05f),
+                    new Vector3(W * 0.02f, boreY + H * 0.14f, D * 0.1f), T);
+                var defl = Box(W * 0.34f, H * 0.13f, 0.03f, steel, new Vector3(W * 0.5f, boreY + H * 0.16f, D * 0.2f), T);
+                defl.transform.localRotation = Quaternion.Euler(0, 0, 29f);
+                Box(W * 1.5f, H * 0.08f, 0.02f, accent, new Vector3(0, boreY + H * 0.26f, -D * 0.48f), T);
+                Box(W * 0.3f, H * 0.06f, 0.05f, accent, new Vector3(0, boreY + H * 0.26f, -D * 0.42f), T);
+                var sel = CylZ(0.008f, W * 1.3f, accent, new Vector3(0, boreY - H * 0.1f, -D * 0.24f), T);
+                sel.transform.localRotation = Quaternion.Euler(0, 0, 90f);
+                Box(W * 1.2f, 0.014f, 0.014f, accent, new Vector3(0, boreY - H * 0.06f, -D * 0.06f), T);
             }
 
-            Box(0.05f, 0.045f, 0.05f, accent, new Vector3(0, recH / 2 + 0.02f, -recL * 0.26f), g.transform);
-            Box(0.032f, 0.05f, 0.03f, accent, new Vector3(0, recH / 2 + 0.022f, recL / 2 + barrel * 0.82f), g.transform);
-            info.sightHeight = recH / 2 + 0.045f;
-
-            if (def.hasOptic)
+            // ---------------------------------------------------------- barrel
+            if (revolver)
             {
-                var o = Cyl(0.045f, 0.16f, Art.Lit("m_optic", Util.Hex(0x2a2f33), 0.5f, 0.5f),
-                    new Vector3(0, recH / 2 + 0.06f, -recL * 0.1f), g.transform);
-                o.transform.localRotation = Quaternion.Euler(90f, 0, 0);
-                info.sightHeight = recH / 2 + 0.06f;
+                Box(W * 0.7f, H * 0.3f, bl, accent, new Vector3(0, boreY + H * 0.12f, front + bl / 2f), T);
+                CylZ(bore * 1.7f, bl, accent, new Vector3(0, boreY + H * 0.12f, front + bl / 2f), T);
+                Box(W * 0.5f, H * 0.16f, bl * 0.8f, steel, new Vector3(0, boreY - H * 0.02f, front + bl * 0.42f), T);
+                float cr = H * 0.3f;
+                CylZ(cr, 0.09f, steel, new Vector3(0, boreY + H * 0.1f, -D * 0.02f), T);
+                var hole = Art.Lit("m_gnbore", Util.Hex(0x0a0c0d), 0.02f);
+                for (int i = 0; i < 6; i++)
+                {
+                    float a = (i / 6f) * Mathf.PI * 2f;
+                    CylZ(bore * 1.15f, 0.095f, hole,
+                        new Vector3(Mathf.Sin(a) * cr * 0.62f, boreY + H * 0.1f + Mathf.Cos(a) * cr * 0.62f, -D * 0.02f), T);
+                }
             }
+            else if (fam == WeaponClass.Shotgun)
+            {
+                CylZ(bore * 1.28f, bl, accent, new Vector3(0, boreY + H * 0.12f, front + bl / 2f), T);
+                CylZ(bore * 0.95f, bl * 0.86f, steel,
+                    new Vector3(0, boreY + H * 0.12f - bore * 2.1f, front + bl * 0.43f), T);
+                if (!def.hasDrum)
+                {
+                    Box(W * 1.15f, H * 0.3f, bl * 0.34f, furniture, new Vector3(0, boreY + H * 0.02f, front + bl * 0.36f), T);
+                    for (int i = 0; i < 5; i++)
+                        Box(W * 1.18f, 0.008f, 0.008f, steel, new Vector3(0, boreY + H * 0.02f, front + bl * 0.22f + i * 0.018f), T);
+                }
+                Ring(bore * 1.3f, 0.004f, steel, new Vector3(0, boreY + H * 0.12f, front + bl), T, 12);
+            }
+            else if (fam == WeaponClass.Pistol)
+            {
+                CylZ(bore * 1.25f, D * 0.92f, accent, new Vector3(0, boreY + H * 0.16f, D * 0.08f), T);
+                if (def.compensator)
+                    Box(W * 0.9f, H * 0.2f, 0.05f, accent, new Vector3(0, boreY + H * 0.22f, front + 0.02f), T);
+            }
+            else
+            {
+                float gasZ = front + bl * 0.52f;
+                CylZ(bore * 2.1f, bl * 0.5f, accent, new Vector3(0, boreY, front + bl * 0.25f), T);
+                CylZ(bore * 1.55f, bl * 0.52f, accent, new Vector3(0, boreY, front + bl * 0.75f), T);
+                Box(W * 0.52f, H * 0.24f, 0.036f, steel, new Vector3(0, boreY + H * 0.02f, gasZ), T);
+                CylZ(0.006f, bl * 0.5f, steel, new Vector3(0, boreY + H * 0.12f, front + bl * 0.28f), T);
+                if (fam == WeaponClass.Lmg)
+                {
+                    Box(0.016f, 0.05f, 0.11f, steel, new Vector3(W * 0.4f, boreY + H * 0.42f, front + bl * 0.1f), T);
+                    for (int s = -1; s <= 1; s += 2)
+                    {
+                        var leg = CylZ(0.008f, 0.2f, steel, new Vector3(s * 0.02f, boreY - H * 0.5f, gasZ + 0.02f), T);
+                        leg.transform.localRotation = Quaternion.Euler(-66f, 0, s * 16f);
+                    }
+                }
+            }
+
+            // ---------------------------------------------------------- handguard
+            if (def.hasGuard && !handgun && fam != WeaponClass.Shotgun)
+            {
+                float hgLen = bl * (fam == WeaponClass.Sniper ? 0.6f : 0.72f);
+                float hgZ = front + hgLen / 2f + 0.005f;
+                if (fam == WeaponClass.Sniper || def.wood)
+                {
+                    Box(W * 1.25f, H * 0.42f, hgLen, furniture, new Vector3(0, boreY - H * 0.12f, hgZ), T);
+                }
+                else
+                {
+                    var vent = Art.Lit("m_gnvent", Util.Hex(0x0d1012), 0.02f);
+                    for (int i = 0; i < 6; i++)
+                    {
+                        float a = (i / 6f) * Mathf.PI * 2f + Mathf.PI / 6f;
+                        var pnl = Box(W * 0.44f, H * 0.12f, hgLen, poly,
+                            new Vector3(Mathf.Sin(a) * W * 0.44f, boreY + Mathf.Cos(a) * W * 0.44f, hgZ), T);
+                        pnl.transform.localRotation = Quaternion.Euler(0, 0, -a * Mathf.Rad2Deg);
+                    }
+                    for (int i = 0; i < 4; i++)
+                        for (int s = -1; s <= 1; s += 2)
+                            Box(0.004f, 0.016f, 0.028f, vent,
+                                new Vector3(s * W * 0.5f, boreY, hgZ - hgLen * 0.3f + i * hgLen * 0.2f), T);
+                    RailSection(hgLen * 0.9f, accent, new Vector3(0, boreY + W * 0.56f, hgZ), T);
+                    if (fam != WeaponClass.Sniper)
+                    {
+                        var fg = Box(0.028f, 0.075f, 0.05f, grip, new Vector3(0, boreY - W * 0.75f, hgZ + hgLen * 0.1f), T);
+                        fg.transform.localRotation = Quaternion.Euler(-24f, 0, 0);
+                    }
+                }
+            }
+
+            // ---------------------------------------------------------- grip
+            float gripZ = -D * (handgun ? 0.22f : 0.2f);
+            float gripY = boreY - H * (handgun ? 0.24f : 0.3f);
+            GripAssembly(furniture == wood && fam == WeaponClass.Shotgun ? wood : grip, steel,
+                new Vector3(0, gripY, gripZ), T, handgun ? 0.3f : 0.36f, handgun ? 0.115f : 0.13f, true);
+
+            // ---------------------------------------------------------- feed
             if (def.hasDrum)
             {
-                var d = Cyl(0.13f, 0.09f, grip, new Vector3(0, -0.14f, recL * 0.05f), g.transform);
-                d.transform.localRotation = Quaternion.Euler(90f, 0, 0);
+                float dr = fam == WeaponClass.Lmg ? 0.1f : 0.085f;
+                float dy = boreY - H * 0.42f - dr * 0.5f;
+                var drum = CylZ(dr, 0.062f, furniture, new Vector3(0, dy, D * 0.04f), T);
+                Ring(dr * 0.96f, 0.006f, steel, new Vector3(0, dy, D * 0.04f + 0.032f), T, 14);
+                Box(W * 0.7f, H * 0.3f, 0.05f, furniture, new Vector3(0, boreY - H * 0.32f, D * 0.04f), T);
+                info.magazine = drum.transform;
+                info.magHome = drum.transform.localPosition;
             }
-            if (def.hasTube)
-                Cyl(0.032f, barrel * 0.9f, accent, new Vector3(0, -0.05f, recL / 2 + barrel * 0.45f), g.transform)
-                    .transform.localRotation = Quaternion.Euler(90f, 0, 0);
+            else if (!def.hasTube && def.hasMag)
+            {
+                GameObject m;
+                if (fam == WeaponClass.Pistol)
+                {
+                    m = Box(0.028f, def.magLen, 0.042f, furniture,
+                        new Vector3(0, gripY - def.magLen * 0.5f + 0.02f, gripZ + 0.006f), T);
+                    m.transform.localRotation = Quaternion.Euler(17f, 0, 0);
+                }
+                else
+                {
+                    m = CurvedMag(def.magLen, 0.03f, 0.05f, furniture,
+                        new Vector3(0, boreY - H * 0.36f, D * 0.04f), T, def.magCurve);
+                }
+                info.magazine = m.transform;
+                info.magHome = m.transform.localPosition;
+            }
 
+            // ---------------------------------------------------------- stock
+            if (def.hasStock && !handgun)
+            {
+                float backZ = -D / 2f;
+                if (fam == WeaponClass.Shotgun || fam == WeaponClass.Sniper || def.wood)
+                    FixedStock(def.stockLen, furniture, rubber, backZ, H * 0.22f, T);
+                else
+                    CollapsibleStock(def.stockLen, furniture, steel, rubber, backZ, T);
+            }
+
+            // ---------------------------------------------------------- sights
+            float topY = boreY + H * 0.4f;
+            float sightY;
+            if (def.hasOptic)
+            {
+                float mag = def.opticMag;
+                bool big = mag >= 4f;
+                float tubeR = big ? 0.019f : 0.015f;
+                float oy = topY + tubeR + 0.019f;
+                float oz = -D * 0.06f;
+                float oLen = big ? 0.26f : 0.14f;
+                var optBody = Art.Lit("m_gnoptic", Util.Hex(0x1a1e21), 0.58f, 0.6f);
+                CylZ(tubeR, oLen, optBody, new Vector3(0, oy, oz), T);
+                if (big)
+                {
+                    CylZ(tubeR * 1.6f, 0.08f, optBody, new Vector3(0, oy, oz + oLen / 2f + 0.04f), T);
+                    Cyl(0.011f, 0.018f, optBody, new Vector3(0, oy + tubeR + 0.009f, oz - 0.01f), T);
+                    var wind = CylZ(0.01f, 0.016f, optBody, new Vector3(tubeR + 0.008f, oy, oz - 0.01f), T);
+                    wind.transform.localRotation = Quaternion.Euler(0, 0, 90f);
+                }
+                CylZ(tubeR * 1.25f, 0.034f, optBody, new Vector3(0, oy, oz - oLen / 2f - 0.017f), T);
+                var lensMat = Art.Emissive("m_gnlens", Util.Hex(0x2b6a7d), 0.35f);
+                CylZ(big ? tubeR * 1.5f : tubeR * 0.9f, 0.004f, lensMat,
+                    new Vector3(0, oy, oz + (big ? oLen / 2f + 0.076f : oLen / 2f + 0.002f)), T);
+                for (int k = 0; k < 2; k++)
+                {
+                    float dz = (k == 0 ? -1f : 1f) * oLen * 0.3f;
+                    Ring(tubeR + 0.004f, 0.005f, accent, new Vector3(0, oy, oz + dz), T, 12);
+                    Box(0.022f, 0.018f, 0.016f, accent, new Vector3(0, oy - tubeR - 0.012f, oz + dz), T);
+                }
+                sightY = oy;
+                info.opticMagnification = mag;
+                info.scoped = big;
+            }
+            else
+            {
+                float fz = front + bl * 0.86f;
+                Box(0.006f, 0.026f, 0.008f, accent, new Vector3(0, topY + 0.012f, fz), T);
+                Ring(0.016f, 0.003f, accent, new Vector3(0, topY + 0.012f, fz), T, 10);
+                Box(0.026f, 0.01f, 0.022f, accent, new Vector3(0, topY - 0.002f, fz), T);
+                Ring(0.011f, 0.004f, accent, new Vector3(0, topY + 0.014f, -D * 0.4f), T, 10);
+                Box(0.03f, 0.016f, 0.018f, accent, new Vector3(0, topY + 0.001f, -D * 0.4f), T);
+                if (!handgun) RailSection(D * 0.7f, accent, new Vector3(0, topY + 0.004f, -D * 0.02f), T);
+                sightY = topY + 0.014f;
+            }
+            info.sightHeight = sightY;
+
+            // ---------------------------------------------------------- energy
             if (def.hasCell || def.upgradeLevel > 0)
             {
-                var cellMat = Art.Emissive("em_cell" + def.accent, accentCol, 2.4f);
-                var cell = Cyl(0.06f, 0.22f, cellMat, new Vector3(0, 0.07f, -recL * 0.05f), g.transform);
+                var em = Art.Emissive("em_cell" + def.accent, accentCol, 2.4f);
+                var cell = CylZ(0.022f, 0.13f, em, new Vector3(0, boreY + H * 0.02f, -D * 0.12f), T);
                 cell.transform.localRotation = Quaternion.Euler(0, 0, 90f);
-                var coil = Cyl(0.075f, 0.03f, cellMat, new Vector3(0, 0.012f, recL / 2 + barrel * 0.7f), g.transform);
-                coil.transform.localRotation = Quaternion.Euler(90f, 0, 0);
-                info.energy = new[] { cell.GetComponent<MeshRenderer>(), coil.GetComponent<MeshRenderer>() };
+                var coil = Ring(bore * 2.4f, 0.006f, em, new Vector3(0, boreY, front + bl * 0.72f), T, 12);
+                var coil2 = Ring(bore * 2.8f, 0.005f, em, new Vector3(0, boreY, front + bl * 0.92f), T, 12);
+                for (int i = 0; i < 4; i++)
+                    Box(W * 1.3f, 0.006f, 0.01f, accent, new Vector3(0, boreY + H * 0.24f, front + bl * 0.2f + i * 0.03f), T);
+                info.energy = new[] { cell.GetComponent<MeshRenderer>() };
+                info.energyGroups = new[] { coil.transform, coil2.transform };
             }
 
-            info.muzzle = new Vector3(0, 0.012f, recL / 2 + barrel);
+            // Muzzle device, and the exact bore exit for tracers and flash.
+            float muzzleZ = handgun ? (revolver ? front + bl : D * 0.54f) : front + bl;
+            if (fam != WeaponClass.Shotgun)
+                MuzzleDevice(def.muzzle, bore, accent, muzzleZ, T);
+
+            info.muzzle = new Vector3(0, boreY + (fam == WeaponClass.Pistol ? H * 0.16f : 0f), muzzleZ + 0.03f);
+            // Where the firing hand grips the weapon. The view model hangs
+            // everything off this, so a long rifle and a pistol both sit
+            // naturally in frame instead of being centred on their receivers.
+            info.gripAnchor = new Vector3(0, gripY - 0.035f, gripZ + 0.02f);
             return g;
         }
 
@@ -577,7 +1023,11 @@ namespace Rotgrid
         public Transform magazine;
         public Vector3 magHome;
         public MeshRenderer[] energy;
+        public Transform[] energyGroups;
         public Vector3 muzzle;
+        public Vector3 gripAnchor;
         public float sightHeight = 0.09f;
+        public float opticMagnification = 1f;
+        public bool scoped;
     }
 }

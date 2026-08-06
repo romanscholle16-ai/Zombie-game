@@ -147,6 +147,20 @@ a time and can be renailed for points.
   damage, fire rate, magazine, recoil, ADS speed, reload speed and a rarity tier.
   Hitscan with penetration, headshot and limb multipliers, spread that responds
   to movement, stance and sustained fire.
+- **Weapon models** — each gun is assembled at runtime from the parts a real one
+  has: upper and lower receiver, ejection port and brass deflector, charging
+  handle, magwell, swept pistol grip and trigger guard, free-float handguard with
+  vents and rail, stepped barrel with a gas block, muzzle device, collapsible or
+  fixed stock, curved magazines, drums and tube optics on ring mounts. The forms
+  are generic to their class — nothing reproduces any manufacturer's product,
+  marking or trade dress.
+- **Optics** — magnified scopes zoom the world camera by their true
+  magnification, draw a real sight picture (opaque surround, round tube, etched
+  mil-dot reticle) and drop the weapon out of frame once you are behind the
+  glass. Everything else uses iron sights or a reflex tube.
+- **Weapon audio** — every weapon has its own synthesised voice, layered from the
+  action working, the supersonic crack, the pressure body, a resonant peak and
+  the room tail. A refit brightens the resonance, so an upgrade is audible.
 - **Wall buys** — eight mounted weapons, plus ammo refills and armour plating.
 - **Mystery crate** — animated spin, rarity-weighted by round, relocates itself
   after a handful of uses.
@@ -154,7 +168,8 @@ a time and can be renailed for points.
   damage, magazine and reserve, and adding burn then explosive rounds.
 - **Perks** — VITAL SURGE (health), QUICK HANDS (reload), LIGHT STEP (speed),
   SECOND WIND (bleed-out and one self-revive), IRON LUNG (sprint). All require
-  power. All are lost when you go down.
+  power. All are lost when you go down. What each one does is on the buy prompt
+  in game and in a full detail panel in the loadout viewer.
 - **Power** — the grid starts dead. The breaker in the power station brings up
   the lights, the perk machines, the refit chamber and the traps.
 - **Traps** — arc pylons, flame vents and a sentry gun, each armed with points,

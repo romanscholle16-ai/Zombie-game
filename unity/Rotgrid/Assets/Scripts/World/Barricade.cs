@@ -25,9 +25,11 @@ namespace Rotgrid
         readonly float[] _hp = new float[BoardsPerWindow];
         readonly Vector3[] _home = new Vector3[BoardsPerWindow];
         public readonly GameObject root;
+        readonly float _wallHeight;
 
-        public Barricade(WindowDef def, float floorY, Transform parent)
+        public Barricade(WindowDef def, float floorY, Transform parent, float wallHeight = 5.2f)
         {
+            _wallHeight = wallHeight;
             id = def.id;
             zone = def.zone;
             x = def.x; z = def.z; y = floorY;
@@ -60,13 +62,28 @@ namespace Rotgrid
         void BuildFrame()
         {
             var m = Props.Concrete;
+            // The wall builder cuts a full-height gap for every window, so the
+            // frame fills everything except the aperture. Miss the span above
+            // the head and you get a black hole punched through the wall.
+            const float ApertureTop = 2.6f;
+            const float HeadH = 0.9f;
             Props.Box(3.2f, 1.05f, 0.5f, m, new Vector3(0, 0.52f, 0), root.transform);
-            Props.Box(3.2f, 0.9f, 0.5f, m, new Vector3(0, 3.05f, 0), root.transform);
+            Props.Box(3.2f, HeadH, 0.5f, m, new Vector3(0, ApertureTop + HeadH * 0.5f, 0), root.transform);
             Props.Box(0.4f, 1.6f, 0.5f, m, new Vector3(-1.6f, 1.85f, 0), root.transform);
             Props.Box(0.4f, 1.6f, 0.5f, m, new Vector3(1.6f, 1.85f, 0), root.transform);
-            // Backing plate so the alcove reads as a void.
-            Props.Box(3.0f, 1.5f, 0.05f, Art.Lit("m_void", Util.Hex(0x04060a), 0f),
-                new Vector3(0, 1.85f, 0.28f), root.transform);
+
+            float infillBase = ApertureTop + HeadH;
+            float infillH = Mathf.Max(0.1f, _wallHeight + 0.4f - infillBase);
+            Props.Box(3.24f, infillH, 0.5f, m, new Vector3(0, infillBase + infillH * 0.5f, 0), root.transform);
+
+            // The aperture stays open: the alcove behind it is a sealed shell, so
+            // you can watch zombies crowd the gap and work the planks loose before
+            // one gets through. A dim unlit panel deep in the alcove backlights
+            // them into silhouettes, far cheaper than a light per window.
+            // A Unity quad's normal points down -z, which is already back toward
+            // the window, so it needs no rotation.
+            Props.Quad(5.2f, 3.4f, Art.Unlit("m_alcoveHaze", Util.Hex(0x46586c)),
+                new Vector3(0, 1.9f, 6.15f), root.transform);
         }
 
         void MakeBoard(int i)

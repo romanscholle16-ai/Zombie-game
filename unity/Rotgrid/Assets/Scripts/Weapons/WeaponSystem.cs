@@ -211,7 +211,7 @@ namespace Rotgrid
             player.stats.shotsFired++;
             player.stats.Weapon(w.Id).shotsFired++;
 
-            Game.Audio.Play(SoundFor(def.sound), 1f);
+            Game.Audio.PlayShot(def, 1f);
             _vm.FireKick(def);
             player.AddShake(Mathf.Clamp(def.recoilV * 0.012f, 0.02f, 0.14f));
 

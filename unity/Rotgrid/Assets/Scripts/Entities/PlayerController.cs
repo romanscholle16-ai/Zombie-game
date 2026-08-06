@@ -266,7 +266,11 @@ namespace Rotgrid
             crouching = sliding || (wantCrouch && grounded);
 
             // ---- stamina
-            sprinting = wantSprint && stamina > 0.02f && !crouching;
+            // Hysteresis: sprinting cuts out at empty but will not resume until a
+            // little stamina is back. A single threshold makes the state chatter
+            // every frame at the boundary, which strobes the view model.
+            float sprintFloor = sprinting ? 0f : 0.12f;
+            sprinting = wantSprint && stamina > sprintFloor && !crouching;
             if (sprinting) stamina = Mathf.Clamp01(stamina - _staminaDrain * dt);
             else stamina = Mathf.Clamp01(stamina + _staminaRegen * dt * (vel.sqrMagnitude > 0.4f ? 0.6f : 1f));
 
@@ -447,10 +451,15 @@ namespace Rotgrid
             camera.rotation = Quaternion.Euler(pitchDeg, yawDeg, rollDeg);
         }
 
-        public float TargetFov(bool adsing)
+        /// <summary>
+        /// Aiming narrows the view by the optic's true magnification, which is
+        /// what makes a 6x scope feel like a scope and not a slightly tighter hip.
+        /// </summary>
+        public float TargetFov(bool adsing, float adsZoom = 1.39f)
         {
             float b = GameSettings.Fov;
-            return adsing ? b * 0.72f : (sprinting ? b * 1.06f : b);
+            float zoom = Mathf.Max(1.05f, adsZoom);
+            return adsing ? b / zoom : (sprinting ? b * 1.06f : b);
         }
     }
 }

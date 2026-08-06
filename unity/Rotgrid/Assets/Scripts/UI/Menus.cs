@@ -16,6 +16,7 @@ namespace Rotgrid
         Vector2 _scroll;
         Bind? _rebinding;
         int _loadoutIndex;
+        int _perkIndex = -1;   // -1 while a weapon is selected instead
         readonly List<WeaponDef> _loadoutList = new List<WeaponDef>();
 
         public Menus(Game app)
@@ -297,11 +298,41 @@ namespace Rotgrid
                     && Event.current.type == EventType.MouseDown && Event.current.button == 0)
                 {
                     _loadoutIndex = i;
+                    _perkIndex = -1;
+                    Game.Audio.Play(Sfx.UiMove, 1f);
+                }
+                ly += rowH;
+            }
+
+            // Perk reference lives here too, so the screen is a real reference sheet.
+            GUI.Label(new Rect(0, ly, listW, rowH), "PERKS", UiKit.H2);
+            ly += rowH;
+            for (int i = 0; i < Perks.All.Count; i++)
+            {
+                var pk = Perks.All[i];
+                var r = new Rect(0, ly, listW - UiKit.Px(20), rowH);
+                bool sel = _perkIndex == i;
+                if (sel) UiKit.Fill(r, new Color(0.62f, 0.85f, 0.23f, 0.18f));
+                UiKit.Fill(new Rect(r.x + UiKit.Px(4), r.y + rowH * 0.5f - UiKit.Px(4), UiKit.Px(8), UiKit.Px(8)), pk.Color);
+                GUI.Label(new Rect(r.x + UiKit.Px(20), r.y, r.width, rowH),
+                    pk.name + "  -  " + Util.FormatNumber(pk.cost),
+                    UiKit.Text(14, sel ? UiKit.Ink : Util.Hex(0xc2c7c0), TextAnchor.MiddleLeft));
+                if (r.Contains(Event.current.mousePosition)
+                    && Event.current.type == EventType.MouseDown && Event.current.button == 0)
+                {
+                    _perkIndex = i;
                     Game.Audio.Play(Sfx.UiMove, 1f);
                 }
                 ly += rowH;
             }
             GUI.EndScrollView();
+
+            if (_perkIndex >= 0)
+            {
+                DrawPerkDetail(body, listW, Perks.All[Mathf.Clamp(_perkIndex, 0, Perks.All.Count - 1)]);
+                DrawFooter(new[] { "BACK" }, i => Back());
+                return;
+            }
 
             var def = _loadoutList[Mathf.Clamp(_loadoutIndex, 0, _loadoutList.Count - 1)];
             float dx = body.x + listW + UiKit.Px(24);
@@ -348,6 +379,52 @@ namespace Rotgrid
                 UiKit.Text(12, UiKit.Dim, TextAnchor.UpperLeft));
 
             DrawFooter(new[] { "BACK" }, i => Back());
+        }
+
+        /// <summary>Full description of a perk: what it costs, and what it buys.</summary>
+        void DrawPerkDetail(Rect body, float listW, PerkDef pk)
+        {
+            float dx = body.x + listW + UiKit.Px(24);
+            float dw = body.width - listW - UiKit.Px(24);
+
+            // Badge with the perk's letter, the way it reads on the HUD.
+            var badge = new Rect(dx, body.y + UiKit.Px(2), UiKit.Px(52), UiKit.Px(52));
+            UiKit.Fill(badge, new Color(0f, 0f, 0f, 0.45f));
+            UiKit.Frame(badge, pk.Color, UiKit.Px(2));
+            GUI.Label(badge, pk.letter, UiKit.TextBold(24, pk.Color, TextAnchor.MiddleCenter));
+
+            float tx = dx + UiKit.Px(68);
+            GUI.Label(new Rect(tx, body.y, dw, UiKit.Px(40)), pk.name,
+                UiKit.TextBold(28, pk.Color, TextAnchor.UpperLeft));
+            GUI.Label(new Rect(tx, body.y + UiKit.Px(36), dw, UiKit.Px(22)),
+                "PERK   ·   " + Util.FormatNumber(pk.cost) + " POINTS",
+                UiKit.Text(12, UiKit.Dim, TextAnchor.UpperLeft));
+
+            var wrap = UiKit.Text(15, UiKit.Ink, TextAnchor.UpperLeft);
+            wrap.wordWrap = true;
+            GUI.Label(new Rect(dx, body.y + UiKit.Px(74), Mathf.Min(dw, UiKit.Px(560)), UiKit.Px(26)),
+                pk.tagline, wrap);
+            var wrapDim = UiKit.Text(13, Util.Hex(0xc0c5bd), TextAnchor.UpperLeft);
+            wrapDim.wordWrap = true;
+            GUI.Label(new Rect(dx, body.y + UiKit.Px(104), Mathf.Min(dw, UiKit.Px(560)), UiKit.Px(26)),
+                pk.effect, wrapDim);
+
+            float py = body.y + UiKit.Px(146);
+            if (pk.detail != null)
+            {
+                for (int i = 0; i < pk.detail.Length; i++)
+                {
+                    UiKit.Fill(new Rect(dx, py + UiKit.Px(7), UiKit.Px(6), UiKit.Px(6)), UiKit.Acid);
+                    GUI.Label(new Rect(dx + UiKit.Px(16), py, Mathf.Min(dw, UiKit.Px(540)), UiKit.Px(40)),
+                        pk.detail[i], wrapDim);
+                    py += UiKit.Px(34);
+                }
+            }
+
+            GUI.Label(new Rect(dx, py + UiKit.Px(14), Mathf.Min(dw, UiKit.Px(560)), UiKit.Px(46)),
+                "Perk machines need the power on. Every perk is lost when you are downed - "
+                + "buy them back before the next horde arrives.",
+                UiKit.Text(12, UiKit.Dim, TextAnchor.UpperLeft));
         }
 
         // ---------------------------------------------------------------- stats

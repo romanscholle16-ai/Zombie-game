@@ -190,7 +190,7 @@ namespace Rotgrid
         void BuildWindow(WindowDef def)
         {
             var zone = MapData.Zone(def.zone);
-            var b = new Barricade(def, zone.y, root.transform);
+            var b = new Barricade(def, zone.y, root.transform, zone.h);
             barricades.Add(b);
 
             float hw = def.nz != 0f ? 1.7f : WallT;
@@ -201,7 +201,9 @@ namespace Rotgrid
             colliders.Add(new Aabb(def.x - hw, def.x + hw, def.z - hd, def.z + hd, zone.y + 2.6f, zone.y + zone.h, false));
 
             // ---- alcove shell
-            var dark = Art.Lit("m_alcove", Util.Hex(0x0d1114), 0f);
+            // Light enough that ambient fill gives the alcove some form — zombies
+            // queueing at the boards need something to read against.
+            var dark = Art.Lit("m_alcove", Util.Hex(0x1c242b), 0f);
             float cx = (def.ax0 + def.ax1) * 0.5f, cz = (def.az0 + def.az1) * 0.5f;
             float aw = def.ax1 - def.ax0, ad = def.az1 - def.az0;
             Props.Box(aw, 0.3f, ad, dark, new Vector3(cx, zone.y - 0.15f, cz), root.transform);

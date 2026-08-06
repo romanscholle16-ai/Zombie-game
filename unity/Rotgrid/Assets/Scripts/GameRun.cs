@@ -309,8 +309,9 @@ namespace Rotgrid
             weapons.Update(dt, canAct && !player.dead);
             player.Update(dt, canAct, weapons.Ads);
 
-            float fov = player.TargetFov(weapons.Ads);
-            camera.fieldOfView = Mathf.Lerp(camera.fieldOfView, fov, Mathf.Clamp01(dt * 11f));
+            float zoom = viewModel != null ? viewModel.AdsZoom : 1.39f;
+            float fov = player.TargetFov(weapons.Ads, zoom);
+            camera.fieldOfView = Mathf.Lerp(camera.fieldOfView, fov, Mathf.Clamp01(dt * (zoom > 3f ? 15f : 11f)));
 
             world.Update(dt, time);
             perks.Update(dt, time);
