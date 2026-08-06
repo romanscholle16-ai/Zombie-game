@@ -56,7 +56,8 @@ export const WEAPONS = {
     reloadTime: 1.5, emptyReloadTime: 1.9, adsTime: 0.18,
     recoil: { v: 1.5, h: 0.5 }, spread: { hip: 0.038, ads: 0.004, move: 0.026 },
     wallCost: 0, wallAmmoCost: 250, boxWeight: 0, sound: 'light',
-    shape: { len: 0.5, recv: [0.055, 0.11, 0.2], barrel: 0.14, stock: false, magLen: 0.14, bore: 0.02 },
+    shape: { family: 'pistol', len: 0.5, recv: [0.05, 0.1, 0.2], barrel: 0.12, stock: false, guard: false,
+      magLen: 0.15, bore: 0.011, muzzle: 'none' },
     blurb: 'Standard-issue service pistol. Reliable, unremarkable, and free.',
   }),
   magnus: W({
@@ -65,7 +66,8 @@ export const WEAPONS = {
     reloadTime: 2.4, emptyReloadTime: 2.9, adsTime: 0.22,
     recoil: { v: 4.2, h: 1.4 }, spread: { hip: 0.055, ads: 0.003, move: 0.04 },
     headMult: 3.0, boxWeight: 12, sound: 'heavy', tint: 0x3b3f42, accent: 0x8d7a4a,
-    shape: { len: 0.55, recv: [0.06, 0.125, 0.24], barrel: 0.2, stock: false, mag: false, drum: true, bore: 0.026 },
+    shape: { family: 'revolver', len: 0.55, recv: [0.052, 0.11, 0.2], barrel: 0.19, stock: false, guard: false,
+      mag: false, bore: 0.0125, muzzle: 'none' },
     blurb: 'Hand cannon. Six chances to remove a head from its shoulders.',
   }),
   hornet: W({
@@ -74,7 +76,8 @@ export const WEAPONS = {
     reloadTime: 1.8, emptyReloadTime: 2.2, adsTime: 0.2,
     recoil: { v: 1.5, h: 1.1 }, spread: { hip: 0.07, ads: 0.02, move: 0.05 },
     wallCost: 900, wallAmmoCost: 450, boxWeight: 10, sound: 'light', tint: 0x33383c,
-    shape: { len: 0.55, recv: [0.058, 0.11, 0.24], barrel: 0.16, stock: false, magLen: 0.24 },
+    shape: { family: 'pistol', len: 0.55, recv: [0.05, 0.1, 0.24], barrel: 0.15, stock: false, guard: false,
+      magLen: 0.26, bore: 0.0105, compensator: true, muzzle: 'brake' },
     blurb: 'Full-auto machine pistol. Empties fast, hits like a swarm.',
   }),
 
@@ -85,7 +88,8 @@ export const WEAPONS = {
     reloadTime: 1.9, emptyReloadTime: 2.5, adsTime: 0.2,
     recoil: { v: 1.1, h: 0.6 }, spread: { hip: 0.05, ads: 0.012, move: 0.035 },
     wallCost: 1000, wallAmmoCost: 500, boxWeight: 12, sound: 'light', tint: 0x2b3033,
-    shape: { len: 0.72, recv: [0.075, 0.12, 0.3], barrel: 0.2, stockLen: 0.16, magLen: 0.22 },
+    shape: { family: 'smg', len: 0.72, recv: [0.052, 0.115, 0.3], barrel: 0.19, stockLen: 0.17,
+      magLen: 0.24, magCurve: 0.22, bore: 0.0105, muzzle: 'cage' },
     blurb: 'Compact 9mm. The dependable answer to the first ten rounds.',
   }),
   ripcord: W({
@@ -95,7 +99,8 @@ export const WEAPONS = {
     recoil: { v: 1.3, h: 0.9 }, spread: { hip: 0.055, ads: 0.014, move: 0.04 },
     wallCost: 1300, wallAmmoCost: 600, boxWeight: 11, sound: 'light',
     tint: 0x363b3e, accent: 0x9a6b3a,
-    shape: { len: 0.78, recv: [0.08, 0.13, 0.32], barrel: 0.22, stockLen: 0.2, magLen: 0.26, optic: true },
+    shape: { family: 'smg', len: 0.78, recv: [0.054, 0.12, 0.32], barrel: 0.21, stockLen: 0.2,
+      magLen: 0.27, magCurve: 0.26, bore: 0.0105, optic: true, opticMag: 1.4, muzzle: 'brake' },
     blurb: 'Overclocked bolt group. Absurd rate of fire, appetite to match.',
   }),
   sleet: W({
@@ -104,7 +109,8 @@ export const WEAPONS = {
     reloadTime: 2.0, emptyReloadTime: 2.6, adsTime: 0.19, penetration: 2,
     recoil: { v: 0.9, h: 0.5 }, spread: { hip: 0.042, ads: 0.008, move: 0.03 },
     boxWeight: 8, sound: 'medium', tint: 0x2a3440, accent: 0x6fa8c9,
-    shape: { len: 0.8, recv: [0.082, 0.13, 0.34], barrel: 0.24, stockLen: 0.2, magLen: 0.28, optic: true },
+    shape: { family: 'smg', len: 0.8, recv: [0.054, 0.122, 0.34], barrel: 0.23, stockLen: 0.2,
+      magLen: 0.29, magCurve: 0.3, bore: 0.011, optic: true, opticMag: 2, muzzle: 'suppressor' },
     blurb: 'Cryo-treated barrel shroud. Stays accurate long past reason.',
   }),
 
@@ -115,7 +121,8 @@ export const WEAPONS = {
     reloadTime: 2.2, emptyReloadTime: 2.9, adsTime: 0.26, penetration: 2,
     recoil: { v: 1.6, h: 0.6 }, spread: { hip: 0.06, ads: 0.005, move: 0.04 },
     wallCost: 1200, wallAmmoCost: 600, boxWeight: 12, sound: 'medium', tint: 0x33393c,
-    shape: { len: 0.95, recv: [0.085, 0.135, 0.4], barrel: 0.3, stockLen: 0.24, magLen: 0.24 },
+    shape: { family: 'ar', len: 0.95, recv: [0.056, 0.13, 0.4], barrel: 0.3, stockLen: 0.24,
+      magLen: 0.25, magCurve: 0.55, bore: 0.0115, muzzle: 'cage' },
     blurb: 'Service rifle. Punches through a shambling queue without complaint.',
   }),
   vulture: W({
@@ -125,7 +132,8 @@ export const WEAPONS = {
     recoil: { v: 2.0, h: 0.7 }, spread: { hip: 0.062, ads: 0.004, move: 0.045 },
     wallCost: 1400, wallAmmoCost: 700, boxWeight: 10, sound: 'medium',
     tint: 0x3a3a32, accent: 0x7a6f4a,
-    shape: { len: 1.0, recv: [0.088, 0.14, 0.42], barrel: 0.34, stockLen: 0.24, magLen: 0.26, optic: true },
+    shape: { family: 'ar', len: 1.0, recv: [0.058, 0.134, 0.42], barrel: 0.34, stockLen: 0.24,
+      magLen: 0.27, magCurve: 0.5, bore: 0.0135, optic: true, opticMag: 2.5, muzzle: 'brake' },
     blurb: 'Heavy-calibre battle rifle. Slower, meaner, worth the recoil.',
   }),
   talon: W({
@@ -134,7 +142,8 @@ export const WEAPONS = {
     mag: 36, reserve: 288, reloadTime: 2.3, emptyReloadTime: 2.9, adsTime: 0.25, penetration: 3,
     recoil: { v: 1.8, h: 0.5 }, spread: { hip: 0.05, ads: 0.003, move: 0.04 },
     boxWeight: 8, sound: 'medium', tint: 0x2d3540, accent: 0x9fb0c4,
-    shape: { len: 1.0, recv: [0.088, 0.14, 0.42], barrel: 0.34, stockLen: 0.26, magLen: 0.26, optic: true },
+    shape: { family: 'ar', len: 1.0, recv: [0.058, 0.134, 0.42], barrel: 0.34, stockLen: 0.26,
+      magLen: 0.27, magCurve: 0.5, bore: 0.012, optic: true, opticMag: 4, muzzle: 'cage' },
     blurb: 'Three-round burst with a locked trigger group. Surgical at range.',
   }),
 
@@ -147,7 +156,8 @@ export const WEAPONS = {
     spread: { hip: 0.11, ads: 0.075, move: 0.13 }, penetration: 2,
     wallCost: 1200, wallAmmoCost: 600, boxWeight: 11, sound: 'shotgun',
     tint: 0x3a2f26, accent: 0x6a5236,
-    shape: { len: 0.92, recv: [0.09, 0.14, 0.38], barrel: 0.36, stockLen: 0.24, mag: false, tube: true, bore: 0.038 },
+    shape: { family: 'shotgun', len: 0.92, recv: [0.058, 0.14, 0.34], barrel: 0.4, stockLen: 0.28,
+      mag: false, tube: true, wood: true, bore: 0.0185 },
     blurb: 'Pump-action crowd editor. Devastating inside four metres.',
   }),
   sawtooth: W({
@@ -157,7 +167,8 @@ export const WEAPONS = {
     range: 26, falloff: 0.8, recoil: { v: 3.2, h: 1.4 },
     spread: { hip: 0.1, ads: 0.07, move: 0.12 }, penetration: 3,
     boxWeight: 8, sound: 'shotgun', tint: 0x30363a, accent: 0x8a3f2a,
-    shape: { len: 0.95, recv: [0.095, 0.15, 0.4], barrel: 0.34, stockLen: 0.24, magLen: 0.3, drum: true, bore: 0.038 },
+    shape: { family: 'shotgun', len: 0.95, recv: [0.058, 0.145, 0.38], barrel: 0.34, stockLen: 0.24,
+      drum: true, bore: 0.0185 },
     blurb: 'Fully automatic scattergun. Feed it points, it feeds you space.',
   }),
 
@@ -169,7 +180,8 @@ export const WEAPONS = {
     recoil: { v: 2.2, h: 1.0 }, spread: { hip: 0.09, ads: 0.008, move: 0.07 },
     moveScale: 0.88, wallCost: 1800, wallAmmoCost: 800, boxWeight: 9, sound: 'heavy',
     tint: 0x2f3336, accent: 0x555b5e,
-    shape: { len: 1.15, recv: [0.1, 0.16, 0.48], barrel: 0.4, stockLen: 0.26, magLen: 0.3, drum: true },
+    shape: { family: 'lmg', len: 1.15, recv: [0.058, 0.155, 0.48], barrel: 0.42, stockLen: 0.26,
+      drum: true, bore: 0.0145, muzzle: 'cage' },
     blurb: 'Hundred-round belt. The reload is a commitment; the burst is worth it.',
   }),
   grinder: W({
@@ -178,7 +190,8 @@ export const WEAPONS = {
     reloadTime: 4.6, emptyReloadTime: 5.4, adsTime: 0.46, penetration: 5,
     recoil: { v: 2.4, h: 1.2 }, spread: { hip: 0.095, ads: 0.01, move: 0.075 },
     moveScale: 0.84, boxWeight: 7, sound: 'heavy', tint: 0x35302c, accent: 0x8a6a3a,
-    shape: { len: 1.2, recv: [0.105, 0.17, 0.5], barrel: 0.42, stockLen: 0.26, magLen: 0.32, drum: true },
+    shape: { family: 'lmg', len: 1.2, recv: [0.058, 0.16, 0.5], barrel: 0.44, stockLen: 0.26,
+      drum: true, bore: 0.0155, muzzle: 'brake' },
     blurb: 'Rotary-fed monster. Holds a corridor by itself.',
   }),
 
@@ -191,7 +204,8 @@ export const WEAPONS = {
     recoil: { v: 6.0, h: 1.0 }, spread: { hip: 0.12, ads: 0.0008, move: 0.1 },
     moveScale: 0.92, wallCost: 1600, wallAmmoCost: 700, boxWeight: 9, sound: 'heavy',
     tint: 0x2c3130, accent: 0x6a7a68,
-    shape: { len: 1.25, recv: [0.085, 0.14, 0.5], barrel: 0.48, stockLen: 0.3, magLen: 0.18, optic: true, bore: 0.024 },
+    shape: { family: 'sniper', len: 1.25, recv: [0.056, 0.135, 0.5], barrel: 0.52, stockLen: 0.32,
+      magLen: 0.15, magCurve: 0.14, bore: 0.0125, wood: true, optic: true, opticMag: 6, muzzle: 'brake' },
     blurb: 'Bolt-action anti-materiel rifle. One round, one corridor.',
   }),
   spire: W({
@@ -201,7 +215,8 @@ export const WEAPONS = {
     headMult: 3.4, range: 240, falloff: 0.05,
     recoil: { v: 7.0, h: 0.6 }, spread: { hip: 0.14, ads: 0.0004, move: 0.11 },
     moveScale: 0.9, boxWeight: 6, sound: 'energy', tint: 0x24303a, accent: 0x66d9ff,
-    shape: { len: 1.3, recv: [0.09, 0.15, 0.52], barrel: 0.5, stockLen: 0.3, magLen: 0.18, optic: true, cell: true },
+    shape: { family: 'sniper', len: 1.3, recv: [0.058, 0.142, 0.52], barrel: 0.54, stockLen: 0.3,
+      magLen: 0.16, magCurve: 0.12, bore: 0.0125, optic: true, opticMag: 8, cell: true, muzzle: 'brake' },
     blurb: 'Magnetically accelerated slug. Passes through everything in the hall.',
   }),
 
@@ -214,7 +229,8 @@ export const WEAPONS = {
     recoil: { v: 2.2, h: 0.4 }, spread: { hip: 0.03, ads: 0.002, move: 0.02 },
     special: 'chain', chain: { targets: 5, radius: 6.5, falloff: 0.7 },
     boxWeight: 3, sound: 'energy', tint: 0x1e2a30, accent: 0x66d9ff,
-    shape: { len: 1.05, recv: [0.1, 0.16, 0.44], barrel: 0.36, stockLen: 0.22, mag: false, optic: true, cell: true, bore: 0.05 },
+    shape: { family: 'energy', len: 1.05, recv: [0.058, 0.155, 0.44], barrel: 0.36, stockLen: 0.22,
+      mag: false, optic: true, opticMag: 1.5, cell: true, bore: 0.024, muzzle: 'none' },
     blurb: 'Prototype capacitor lance. Arcs between everything with a pulse.',
   }),
   rotcannon: W({
@@ -225,7 +241,8 @@ export const WEAPONS = {
     recoil: { v: 3.4, h: 0.5 }, spread: { hip: 0.04, ads: 0.006, move: 0.03 },
     special: 'blast', blast: { radius: 4.4, damage: 380 },
     boxWeight: 3, sound: 'energy', tint: 0x232a1e, accent: 0x9fd93a,
-    shape: { len: 1.0, recv: [0.11, 0.17, 0.42], barrel: 0.3, stockLen: 0.22, magLen: 0.24, cell: true, bore: 0.07 },
+    shape: { family: 'energy', len: 1.0, recv: [0.058, 0.165, 0.42], barrel: 0.3, stockLen: 0.22,
+      magLen: 0.24, magCurve: 0.2, cell: true, bore: 0.032, muzzle: 'none' },
     blurb: 'Fires an unstable spore charge. Do not discharge at arm’s length.',
   }),
 };

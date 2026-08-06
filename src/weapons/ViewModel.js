@@ -4,16 +4,17 @@ import { Tex } from '../world/Textures.js';
 import { applyEnvironment } from '../world/Environment.js';
 import { damp, clamp, rand } from '../core/Util.js';
 
-const HIP = new THREE.Vector3(0.2, -0.185, -0.44);
-const SPRINT = new THREE.Vector3(0.26, -0.26, -0.4);
-const RELOAD = new THREE.Vector3(0.23, -0.33, -0.42);
-const DOWN = new THREE.Vector3(0.22, -0.46, -0.4);
+const HIP = new THREE.Vector3(0.13, -0.105, -0.36);
+const SPRINT = new THREE.Vector3(0.185, -0.2, -0.31);
+const RELOAD = new THREE.Vector3(0.16, -0.25, -0.33);
+const DOWN = new THREE.Vector3(0.17, -0.38, -0.3);
 // The view model uses its own, narrower field of view so the gun keeps a
 // consistent size no matter what the player sets for the world camera.
 const VM_FOV = 65;
-// View models are drawn a little under life size; guns read better slightly
-// shrunk in a 65-degree view than they do at true scale.
-const VM_SCALE = 0.66;
+// View models are drawn well under life size. Now that the models have true
+// firearm proportions, anything near 1:1 fills half the screen in a 65-degree
+// view — this is the scale that keeps a 1.4 m bolt gun readable in frame.
+const VM_SCALE = 0.48;
 
 /**
  * First-person weapon rendering. Lives on a dedicated overlay scene so the
@@ -38,10 +39,19 @@ export class ViewModel {
     this.holder = new THREE.Group();
     this.root.add(this.holder);
 
+    // Weapon models are built muzzle-forward along +z, but a three.js camera
+    // looks down -z. Everything that belongs to the gun hangs off this flipped
+    // node so the muzzle points away from the player instead of at them.
+    this.gunRoot = new THREE.Group();
+    this.gunRoot.rotation.y = Math.PI;
+    this.holder.add(this.gunRoot);
+
     this.model = null;
+    this.optic = null;
     this.knife = makeKnifeModel(VM_SCALE);
     this.knife.visible = false;
-    this.holder.add(this.knife);
+    this.knife.position.set(0.01, -0.02, 0.06);
+    this.gunRoot.add(this.knife);
 
     // Muzzle flash: cross-planes plus a punchy light.
     const flashMat = new THREE.MeshBasicMaterial({
@@ -54,9 +64,9 @@ export class ViewModel {
       this.flash.add(p);
     }
     this.flash.visible = false;
-    this.holder.add(this.flash);
+    this.gunRoot.add(this.flash);
     this.flashLight = new THREE.PointLight(0xffd0a0, 0, 3.0);
-    this.holder.add(this.flashLight);
+    this.gunRoot.add(this.flashLight);
 
     this.pos = HIP.clone();
     this.rot = new THREE.Vector3();
@@ -64,6 +74,9 @@ export class ViewModel {
     this.sway = new THREE.Vector2();
     this.bobT = 0;
     this.adsT = 0;
+    this.sprintT = 0;
+    this.reloadT = 0;
+    this.downT = 0;
     this.meleeT = 0;
     this.swapT = 0;
     this.flashT = 0;
@@ -71,20 +84,29 @@ export class ViewModel {
   }
 
   setWeapon(def) {
-    if (this.model) this.holder.remove(this.model);
+    if (this.model) this.gunRoot.remove(this.model);
     this.model = makeWeaponModel(def, VM_SCALE);
     this.model.traverse((o) => { o.castShadow = false; o.receiveShadow = false; });
-    this.holder.add(this.model);
-    const sh = (this.model.userData.sightHeight ?? 0.09) * VM_SCALE;
-    this.adsOffset.set(0, -sh - 0.015, -0.34);
-    const muzzleZ = ((def.shape?.recv?.[2] ?? 0.35) / 2 + (def.shape?.barrel ?? 0.35)) * VM_SCALE;
-    this.muzzleLocal = new THREE.Vector3(0, 0.012, muzzleZ);
+    this.gunRoot.add(this.model);
+    // Hang the model off its grip so weapons of wildly different length all
+    // sit in the hand rather than being centred on their own receivers.
+    const anchor = this.model.userData.gripAnchor ?? new THREE.Vector3();
+    this.model.position.set(-anchor.x * VM_SCALE, -anchor.y * VM_SCALE, -anchor.z * VM_SCALE);
+
+    const sh = ((this.model.userData.sightHeight ?? 0.09) - anchor.y) * VM_SCALE;
+    this.adsOffset.set(0, -sh - 0.012, -0.3);
+    // The model reports where its bore actually exits, so tracers and the
+    // flash sit on the muzzle device instead of a guess based on the envelope.
+    this.muzzleLocal = (this.model.userData.muzzle ?? new THREE.Vector3(0, 0.012, 0.5))
+      .clone().sub(anchor).multiplyScalar(VM_SCALE);
+    this.optic = this.model.userData.optic ?? null;
     this.flash.position.copy(this.muzzleLocal);
     this.flashLight.position.copy(this.muzzleLocal);
     this.swapT = 1;
   }
 
   showKnife(on) {
+    this.knifeOut = on;
     this.knife.visible = on;
     if (this.model) this.model.visible = !on;
   }
@@ -115,14 +137,19 @@ export class ViewModel {
     this.sway.y = damp(this.sway.y, clamp(lookDY * 2.4, -0.06, 0.06), 9, dt);
 
     // ---- target pose
+    // Every pose is a damped weight rather than a hard switch. Sprint in
+    // particular toggles on and off around the stamina floor, and swapping the
+    // target vector outright made the gun strobe between two positions.
     this.adsT = damp(this.adsT, ads ? 1 : 0, weapon ? 1 / Math.max(0.06, weapon.def.adsTime * 0.42) : 12, dt);
-    let target = HIP;
-    if (reloading) target = RELOAD;
-    else if (sprinting && !ads) target = SPRINT;
-    if (downed) target = DOWN;
+    this.sprintT = damp(this.sprintT ?? 0, sprinting && !ads && !reloading && !downed ? 1 : 0, 9, dt);
+    this.reloadT = damp(this.reloadT ?? 0, reloading && !downed ? 1 : 0, 11, dt);
+    this.downT = damp(this.downT ?? 0, downed ? 1 : 0, 7, dt);
 
-    const base = new THREE.Vector3().copy(target);
-    if (this.adsT > 0.001 && !reloading) base.lerp(this.adsOffset, this.adsT);
+    const base = HIP.clone();
+    if (this.sprintT > 0.001) base.lerp(SPRINT, this.sprintT);
+    if (this.reloadT > 0.001) base.lerp(RELOAD, this.reloadT);
+    if (this.adsT > 0.001) base.lerp(this.adsOffset, this.adsT * (1 - this.reloadT));
+    if (this.downT > 0.001) base.lerp(DOWN, this.downT);
 
     // ---- bob
     this.bobT += dt * (sprinting ? 12 : 8.5) * clamp(moving, 0, 1.4);
@@ -157,11 +184,11 @@ export class ViewModel {
       base.z - rec * 0.09 + meleeZ,
     );
 
-    const reloadTilt = reloading ? Math.sin(performance.now() * 0.012) * 0.05 : 0;
+    const reloadTilt = Math.sin(performance.now() * 0.012) * 0.05 * this.reloadT;
     this.holder.rotation.set(
       -rec * 0.5 + this.sway.y * 1.6 + reloadTilt - meleeRot * 0.4,
-      -this.sway.x * 2.6 + (reloading ? 0.45 : 0) + meleeRot * 0.5,
-      this.sway.x * 1.4 + (sprinting && !ads ? 0.28 : 0) + (downed ? 0.4 : 0) + meleeRot * 0.6,
+      -this.sway.x * 2.6 + this.reloadT * 0.45 + meleeRot * 0.5,
+      this.sway.x * 1.4 + this.sprintT * 0.28 + this.downT * 0.4 + meleeRot * 0.6,
     );
 
     // ---- muzzle flash decay
@@ -192,7 +219,22 @@ export class ViewModel {
     }
   }
 
+  /** How much the world camera should zoom while aiming this weapon. */
+  get adsZoom() {
+    const m = this.optic?.magnification ?? 1;
+    return Math.max(1.39, m * 1.1);
+  }
+
+  /** Sight-picture state for the HUD, or null when this optic has no tube. */
+  scopeState() {
+    if (!this.optic?.scoped || this.knifeOut) return null;
+    return { t: this.adsT, sway: { x: this.sway.x, y: this.sway.y } };
+  }
+
   render(renderer) {
+    // Behind a magnified optic the weapon is out of the sight picture, so it
+    // is not drawn at all once the scope has taken over the screen.
+    if (this.optic?.scoped && this.adsT > 0.72) return;
     this.camera.fov = VM_FOV - this.adsT * 8;
     this.camera.updateProjectionMatrix();
     renderer.autoClear = false;
@@ -210,7 +252,8 @@ export class ViewModel {
   muzzleWorld(playerCamera, out = new THREE.Vector3()) {
     if (!this.model) return out.copy(playerCamera.position);
     out.copy(this.muzzleLocal ?? new THREE.Vector3());
-    this.holder.localToWorld(out);
+    this.gunRoot.updateMatrixWorld();
+    this.gunRoot.localToWorld(out);
     // The view model lives in its own space; map it in front of the player.
     out.applyMatrix4(playerCamera.matrixWorld);
     return out;

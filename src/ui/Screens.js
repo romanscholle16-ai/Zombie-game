@@ -6,7 +6,7 @@ import { Input } from '../core/Input.js';
 import { Audio } from '../core/AudioEngine.js';
 import { WEAPONS, CATEGORIES, RARITY, weaponsByCategory, KNIFE } from '../weapons/WeaponDefs.js';
 import { PERK_LIST } from '../systems/Perks.js';
-import { makeWeaponModel } from '../world/Props.js';
+import { makeWeaponModel, makePerkMachine } from '../world/Props.js';
 import { MAP } from '../world/MapData.js';
 import { applyEnvironment } from '../world/Environment.js';
 
@@ -467,6 +467,7 @@ export class LoadoutViewer {
 
     this.model = null;
     this.selected = WEAPONS.sidearm;
+    this.selectedPerk = null;
     this.t = 0;
     this.viewEl = null;
   }
@@ -481,7 +482,30 @@ export class LoadoutViewer {
     const detail = el('div', { class: 'wep-detail' });
     this.viewEl = el('div', { class: 'wep-view' });
 
+    const renderPerkDetail = () => {
+      const p = this.selectedPerk;
+      detail.innerHTML = '';
+      const hex = `#${p.color.toString(16).padStart(6, '0')}`;
+      detail.appendChild(el('div', { class: 'perk-hero', style: `--pk:${hex}` },
+        el('div', { class: 'perk-badge', text: p.letter }),
+        el('div', {},
+          el('div', { class: 'wep-title', style: `color:${hex}`, text: p.name }),
+          el('div', { class: 'wep-sub', text: `PERK · ${formatNumber(p.cost)} POINTS` }))));
+      detail.appendChild(el('div', { class: 'wep-meta' },
+        el('div', {},
+          el('p', { class: 'wep-blurb', style: 'margin-top:0;font-size:14px', text: p.tagline }),
+          el('p', { class: 'wep-blurb', style: 'margin-top:10px', text: p.effect })),
+        el('ul', { class: 'perk-points' },
+          ...p.detail.map((d) => el('li', { text: d })))));
+      detail.appendChild(this.viewEl);
+      detail.appendChild(el('p', { class: 'wep-blurb', style: 'margin-top:14px;opacity:.62',
+        text: 'Perk machines need the power on. Every perk is lost when you are downed — '
+          + 'buy them back before the next horde arrives.' }));
+      this.setPerkModel(p);
+    };
+
     const renderDetail = () => {
+      if (this.selectedPerk) return renderPerkDetail();
       const w = this.selected;
       detail.innerHTML = '';
       const bars = [
@@ -519,6 +543,7 @@ export class LoadoutViewer {
           class: `wep-btn${w === this.selected ? ' sel' : ''}`,
           onclick: () => {
             this.selected = w;
+            this.selectedPerk = null;
             list.querySelectorAll('.wep-btn').forEach((b) => b.classList.remove('sel'));
             btn.classList.add('sel');
             Audio.play('ui', { kind: 'move' });
@@ -532,10 +557,19 @@ export class LoadoutViewer {
     // Perk reference lives here too, so the screen is a real reference sheet.
     list.appendChild(el('div', { class: 'wep-cat', text: 'PERKS' }));
     for (const p of PERK_LIST) {
-      list.appendChild(el('div', {
-        class: 'wep-btn', style: 'cursor:default', title: p.effect,
-      }, el('span', { class: 'rar uncommon', style: `background:#${p.color.toString(16).padStart(6, '0')}` }),
-      el('span', { text: `${p.name} · ${formatNumber(p.cost)}` })));
+      const hex = `#${p.color.toString(16).padStart(6, '0')}`;
+      const pb = el('button', {
+        class: `wep-btn${this.selectedPerk === p ? ' sel' : ''}`,
+        onclick: () => {
+          this.selectedPerk = p;
+          list.querySelectorAll('.wep-btn').forEach((b) => b.classList.remove('sel'));
+          pb.classList.add('sel');
+          Audio.play('ui', { kind: 'move' });
+          renderDetail();
+        },
+      }, el('span', { class: 'rar', style: `background:${hex}` }),
+      el('span', { text: `${p.name} · ${formatNumber(p.cost)}` }));
+      list.appendChild(pb);
     }
 
     const node = el('div', { class: 'screen' }, ...frame(),
@@ -553,12 +587,26 @@ export class LoadoutViewer {
 
   setModel(def) {
     if (this.model) this.pivot.remove(this.model);
+    this.model = null;
+    if (!def) return;
     this.model = makeWeaponModel(def, 1);
+    this._frame();
+  }
+
+  /** Shows the dispenser itself when a perk is selected. */
+  setPerkModel(perk) {
+    if (this.model) this.pivot.remove(this.model);
+    this.model = makePerkMachine(perk);
+    this.model.scale.setScalar(0.62);
+    this._frame(0.9);
+  }
+
+  _frame(pad = 1.35) {
     this.pivot.add(this.model);
-    // Frame the weapon regardless of how long it is.
+    // Frame the subject regardless of how long or tall it is.
     const bounds = new THREE.Box3().setFromObject(this.model);
     const sphere = bounds.getBoundingSphere(new THREE.Sphere());
-    const dist = sphere.radius / Math.tan((this.camera.fov * Math.PI) / 360) * 1.35;
+    const dist = sphere.radius / Math.tan((this.camera.fov * Math.PI) / 360) * pad;
     this.camera.position.set(0, sphere.center.y + 0.05, Math.max(0.8, dist));
     this.camera.lookAt(0, sphere.center.y, 0);
     this.model.position.y -= sphere.center.y;

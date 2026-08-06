@@ -228,7 +228,8 @@ export class Player extends Emitter {
 
   // ================================================================== update
   update(dt, opts = {}) {
-    const { canMove = true, adsing = false } = opts;
+    const { canMove = true, adsing = false, adsZoom = 1.39 } = opts;
+    this.adsZoom = adsZoom;
 
     this._look(dt, canMove);
     if (this.dead) return;
@@ -273,7 +274,11 @@ export class Player extends Emitter {
     this.crouching = this.sliding || (wantCrouch && this.grounded);
 
     // ---- stamina & sprint
-    this.sprinting = wantSprint && this.stamina > 0.02 && !this.crouching;
+    // Hysteresis: sprinting cuts out at empty but will not resume until a
+    // little stamina is back. A single threshold makes the state chatter every
+    // frame at the boundary, which strobes the sprint pose on the view model.
+    const floor = this.sprinting ? 0.0 : 0.12;
+    this.sprinting = wantSprint && this.stamina > floor && !this.crouching;
     if (this.sprinting) this.stamina = clamp(this.stamina - this.staminaDrain * dt, 0, 1);
     else this.stamina = clamp(this.stamina + this.staminaRegen * dt * (this.isMoving ? 0.6 : 1), 0, 1);
 
@@ -461,9 +466,12 @@ export class Player extends Emitter {
     this.camera.rotation.z = roll + this.viewRoll + shr + (this.downed ? 0.22 : 0);
 
     const fovBase = Settings.get('fov');
-    const targetFov = adsing ? fovBase * 0.72 : this.sprinting ? fovBase * 1.06 : fovBase;
+    // Magnified optics narrow the view by their true magnification, which is
+    // what makes a 6x scope feel like a scope and not a slightly tighter hip.
+    const zoom = Math.max(1.05, this.adsZoom ?? 1.39);
+    const targetFov = adsing ? fovBase / zoom : this.sprinting ? fovBase * 1.06 : fovBase;
     if (Math.abs(this.camera.fov - targetFov) > 0.05) {
-      this.camera.fov = damp(this.camera.fov, targetFov, 11, dt);
+      this.camera.fov = damp(this.camera.fov, targetFov, zoom > 3 ? 15 : 11, dt);
       this.camera.updateProjectionMatrix();
     }
   }

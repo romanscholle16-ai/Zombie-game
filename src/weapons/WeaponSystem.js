@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Weapon } from './Weapon.js';
 import { WEAPONS, KNIFE } from './WeaponDefs.js';
+import { voiceFor } from './WeaponVoices.js';
 import { Input } from '../core/Input.js';
 import { Audio } from '../core/AudioEngine.js';
 import { clamp, rand } from '../core/Util.js';
@@ -189,7 +190,7 @@ export class WeaponSystem {
     hooks.weaponStat(w.id).shotsFired++;
 
     const def = w.def;
-    Audio.play('shoot', { weight: def.sound, volume: 1 });
+    Audio.play('shoot', { weight: def.sound, voice: voiceFor(def), volume: 1 });
     viewModel.fireKick(def);
     player.addShake(clamp(def.recoil.v * 0.012, 0.02, 0.14));
 

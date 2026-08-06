@@ -293,7 +293,11 @@ export class Game {
 
     // ---- player + weapons
     this.weapons.update(dt, canAct && !this.player.dead);
-    this.player.update(dt, { canMove: canAct, adsing: this.weapons.ads });
+    this.player.update(dt, {
+      canMove: canAct,
+      adsing: this.weapons.ads,
+      adsZoom: this.viewModel.adsZoom,
+    });
 
     // ---- audio listener
     const f = this.player.forward;
@@ -351,6 +355,7 @@ export class Game {
       rounds: this.rounds,
       elapsed: this.elapsed,
       powerups: this.drops,
+      scope: this.viewModel.scopeState(),
     });
   }
 

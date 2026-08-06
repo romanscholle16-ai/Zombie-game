@@ -11,8 +11,9 @@ const BOARD_W = 2.7;
  * time, then vault the sill. Players can renail planks for points.
  */
 export class Barricade {
-  constructor(def, floorY) {
+  constructor(def, floorY, wallHeight = 5.2) {
     this.id = def.id;
+    this.wallHeight = wallHeight;
     this.zone = def.zone;
     this.x = def.x;
     this.z = def.z;
@@ -41,15 +42,39 @@ export class Barricade {
 
   _buildFrame() {
     const frameMat = Mats.concrete;
-    // Sill + head, forming the window aperture in the wall.
+    // The wall builder cuts a full-height gap for every window, so the frame
+    // is responsible for filling everything except the aperture itself. Miss
+    // the span above the head and you get a black hole punched through the
+    // wall — which is exactly what it looks like from inside.
+    const APERTURE_TOP = 2.6;
+    const HEAD_H = 0.9;
     this.group.add(box(3.2, 1.05, 0.5, frameMat, 0, 0.52, 0));
-    this.group.add(box(3.2, 0.9, 0.5, frameMat, 0, 3.05, 0));
+    this.group.add(box(3.2, HEAD_H, 0.5, frameMat, 0, APERTURE_TOP + HEAD_H / 2, 0));
     this.group.add(box(0.4, 1.6, 0.5, frameMat, -1.6, 1.85, 0));
     this.group.add(box(0.4, 1.6, 0.5, frameMat, 1.6, 1.85, 0));
-    // Backing darkness so the alcove reads as a void.
-    const back = box(3.0, 1.5, 0.05, new THREE.MeshBasicMaterial({ color: 0x04060a }), 0, 1.85, 0.28);
-    back.castShadow = false;
-    this.group.add(back);
+
+    // Infill from the head up to the ceiling. Slightly oversized so it never
+    // leaves a hairline seam against the surrounding wall.
+    const infillBase = APERTURE_TOP + HEAD_H;
+    const infillH = Math.max(0.1, this.wallHeight + 0.4 - infillBase);
+    const infill = box(3.24, infillH, 0.5, frameMat, 0, infillBase + infillH / 2, 0);
+    infill.castShadow = false;
+    this.group.add(infill);
+
+    // The aperture stays open: the alcove behind it is a sealed shell, so you
+    // can watch zombies crowd the gap and work the planks loose before the
+    // first one gets through. A dim panel deep in the alcove backlights them
+    // into silhouettes — far cheaper than a real light per window, and it
+    // reads better besides.
+    const haze = new THREE.Mesh(
+      new THREE.PlaneGeometry(5.2, 3.4),
+      // Unfogged: the alcove is only a few metres deep but the interior fog is
+      // thick enough to swallow the panel entirely if it participates.
+      new THREE.MeshBasicMaterial({ color: 0x46586c, fog: false }),
+    );
+    haze.position.set(0, 1.9, 6.15);
+    haze.rotation.y = Math.PI;
+    this.group.add(haze);
   }
 
   _makeBoard(i) {

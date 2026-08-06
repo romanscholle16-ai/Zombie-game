@@ -11,23 +11,54 @@ import { Audio } from '../core/AudioEngine.js';
 export const PERKS = {
   vital: {
     id: 'vital', name: 'VITAL SURGE', short: 'VITAL', letter: 'V', cost: 2500, color: 0xc0392b,
+    tagline: 'Take more punishment',
     effect: 'Raises maximum health from 100 to 175.',
+    detail: [
+      'Maximum health 100 → 175.',
+      'Refills you to the new maximum the moment you drink it.',
+      'Roughly two extra hits before you go down, at any round.',
+      'Lost when you are downed, like every perk.',
+    ],
   },
   rapid: {
     id: 'rapid', name: 'QUICK HANDS', short: 'HANDS', letter: 'Q', cost: 3000, color: 0xe8a33d,
+    tagline: 'Get back in the fight',
     effect: 'Reloads roughly twice as fast.',
+    detail: [
+      'Reload time cut by about half on every weapon.',
+      'Biggest gain on belt-fed guns, where a reload is otherwise five seconds.',
+      'Turns a magazine dump from a death sentence into a pause.',
+    ],
   },
   swift: {
     id: 'swift', name: 'LIGHT STEP', short: 'STEP', letter: 'L', cost: 2000, color: 0x4aa3ff,
+    tagline: 'Stay ahead of the train',
     effect: 'Move 13% faster and swap weapons quicker.',
+    detail: [
+      'Base movement speed +13%, sprint included.',
+      'Weapon swaps come up noticeably faster.',
+      'Enough of an edge to hold a loop that would otherwise close on you.',
+    ],
   },
   medic: {
     id: 'medic', name: 'SECOND WIND', short: 'WIND', letter: 'S', cost: 1500, color: 0x9fd93a,
+    tagline: 'One more chance',
     effect: 'Longer bleed-out and one self-revive per life.',
+    detail: [
+      'Bleed-out timer 30s → 45s.',
+      'Grants one self-revive: bleed out once and you get back up at half health.',
+      'The cheapest perk, and the one that most often saves a high round.',
+    ],
   },
   endure: {
     id: 'endure', name: 'IRON LUNG', short: 'LUNG', letter: 'I', cost: 2000, color: 0xb479ff,
+    tagline: 'Run further, recover sooner',
     effect: 'Sprint roughly twice as long and recover faster.',
+    detail: [
+      'Stamina drain nearly halved; regeneration raised by half again.',
+      'Long map loops stop breaking into a walk halfway round.',
+      'Pairs with LIGHT STEP for a train you can hold indefinitely.',
+    ],
   },
 };
 
@@ -79,7 +110,7 @@ class PerkMachine extends Interactable {
     if (this.dispenseT > 0) {
       this.dispenseT -= dt;
       bottle.visible = true;
-      bottle.position.y = 0.66 + Math.sin(this.dispenseT * 4) * 0.03;
+      bottle.position.y = 0.62 + Math.sin(this.dispenseT * 4) * 0.03;
       if (this.dispenseT <= 0) bottle.visible = false;
     }
   }

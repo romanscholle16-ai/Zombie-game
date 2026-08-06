@@ -182,7 +182,7 @@ export class World extends Emitter {
 
   _buildWindow(def) {
     const zone = MAP.zones.find((z) => z.id === def.zone);
-    const b = new Barricade(def, zone.y);
+    const b = new Barricade(def, zone.y, zone.h);
     this.root.add(b.group);
     this.barricades.push(b);
 
@@ -195,7 +195,9 @@ export class World extends Emitter {
 
     // ---- alcove shell
     const [ax0, az0, ax1, az1] = def.alcove;
-    const dark = mat('alcove', { color: 0x0d1114, roughness: 1 });
+    // Light enough that the hemisphere fill gives the alcove some form —
+    // zombies queueing at the boards need something to read against.
+    const dark = mat('alcove', { color: 0x1c242b, roughness: 1 });
     const cx = (ax0 + ax1) / 2, cz = (az0 + az1) / 2;
     const aw = ax1 - ax0, ad = az1 - az0;
     this.root.add(box(aw, 0.3, ad, dark, cx, zone.y - 0.15, cz));

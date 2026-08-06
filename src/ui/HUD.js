@@ -21,6 +21,8 @@ export class HUD {
     this.weaponAlt = this.$('hud-weapon-alt');
     this.crosshair = this.$('crosshair');
     this.hitmarkerEl = this.$('hitmarker');
+    this.scope = this.$('scope');
+    this.scopeTube = this.scope?.querySelector('.scope-tube');
     this.prompt = this.$('prompt');
     this.toastStack = this.$('toast-stack');
     this.vignette = this.$('damage-vignette');
@@ -51,6 +53,9 @@ export class HUD {
     this.downed.classList.add('hidden');
     this.vignette.style.opacity = 0;
     this.lowPulse.classList.remove('on');
+    this.scope?.classList.add('hidden');
+    this._scopeShown = false;
+    this._scopeT = 0;
     this.lastPoints = 0;
   }
 
@@ -93,8 +98,41 @@ export class HUD {
       this.downed.classList.add('hidden');
     }
 
+    this._updateScope(state.scope);
     this.crosshair.classList.toggle('ads', weapons.ads);
-    this.crosshair.classList.toggle('hidden-ch', !Settings.get('crosshair'));
+    this.crosshair.classList.toggle('hidden-ch', !Settings.get('crosshair') || this._scopeT > 0.02);
+  }
+
+  /**
+   * Sight picture for magnified optics.
+   * @param {{t:number, sway:{x:number,y:number}}|null} s scope-in progress 0..1
+   */
+  _updateScope(s) {
+    const t = s ? clamp(s.t, 0, 1) : 0;
+    this._scopeT = t;
+    if (!this.scope) return;
+    if (t <= 0.001) {
+      if (this._scopeShown) {
+        this.scope.classList.add('hidden');
+        this.scope.style.opacity = '0';
+        this._scopeShown = false;
+      }
+      return;
+    }
+    if (!this._scopeShown) {
+      this.scope.classList.remove('hidden');
+      this._scopeShown = true;
+    }
+    // The tube irises in as you settle behind the glass, so the transition
+    // reads as bringing the optic to your eye rather than a hard cut.
+    const short = Math.min(window.innerWidth, window.innerHeight);
+    const radius = short * (0.62 - 0.20 * t);
+    this.scope.style.opacity = String(clamp((t - 0.35) / 0.5, 0, 1));
+    this.scope.style.setProperty('--scope-r', `${radius.toFixed(1)}px`);
+    if (this.scopeTube && s.sway) {
+      this.scopeTube.style.setProperty('--scope-x', `${(s.sway.x * short * 0.035).toFixed(2)}px`);
+      this.scopeTube.style.setProperty('--scope-y', `${(s.sway.y * short * 0.035).toFixed(2)}px`);
+    }
   }
 
   _updatePerks(player) {
@@ -194,10 +232,13 @@ export class HUD {
         data.blocked ? null : el('span', { class: 'pk', text: key }),
         el('span', { class: 'pt', text: data.text }));
       this.prompt.appendChild(line);
+      // Price and description are both worth showing — you should not have to
+      // buy a perk to find out what it does.
       if (data.cost !== undefined && data.cost !== null) {
         this.prompt.appendChild(el('span', { class: 'pc', text: `${formatNumber(data.cost)} POINTS` }));
-      } else if (data.sub) {
-        this.prompt.appendChild(el('span', { class: 'pc', text: data.sub }));
+      }
+      if (data.sub) {
+        this.prompt.appendChild(el('span', { class: 'pd', text: data.sub }));
       }
       if (data.hold !== undefined) {
         this.holdRing = el('span', { class: 'hold-ring' }, el('i', {}));

@@ -246,6 +246,61 @@ export const Tex = {
   },
 
   /** Text label drawn to a texture — used for machine signage. */
+  /** Moulded stipple, the way a polymer grip panel is checkered. */
+  gunGrip(repeat = 3) {
+    return make('gunGrip', (ctx, s, rng) => {
+      noiseFill(ctx, s, rng, [46, 50, 55], 14);
+      const step = s / 22;
+      for (let y = 0; y < s; y += step) {
+        for (let x = 0; x < s; x += step) {
+          const o = ((y / step) & 1) * step * 0.5;
+          ctx.fillStyle = `rgba(20,23,26,${0.35 + rng() * 0.25})`;
+          ctx.beginPath();
+          ctx.arc(x + o + step / 2, y + step / 2, step * 0.3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = `rgba(120,130,140,${0.1 + rng() * 0.1})`;
+          ctx.beginPath();
+          ctx.arc(x + o + step / 2, y + step / 2 - step * 0.1, step * 0.16, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }, repeat, 128);
+  },
+
+  /** Bead-blasted receiver finish with faint machining lines. */
+  gunMetal(repeat = 2) {
+    return make('gunMetal', (ctx, s, rng) => {
+      noiseFill(ctx, s, rng, [88, 92, 97], 22);
+      for (let i = 0; i < 90; i++) {
+        const y = rng() * s;
+        ctx.strokeStyle = `rgba(${rng() > 0.5 ? '150,158,166' : '48,52,57'},${0.05 + rng() * 0.12})`;
+        ctx.lineWidth = 0.5 + rng();
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(s, y + (rng() - 0.5) * 3);
+        ctx.stroke();
+      }
+      blotches(ctx, s, rng, 14, '30,33,36', 8, 40, 0.22);
+    }, repeat, 128);
+  },
+
+  /** Oiled walnut for shotgun and bolt-gun furniture. */
+  gunWood(repeat = 1) {
+    return make('gunWood', (ctx, s, rng) => {
+      noiseFill(ctx, s, rng, [86, 55, 32], 16);
+      for (let i = 0; i < 42; i++) {
+        const x = rng() * s;
+        ctx.strokeStyle = `rgba(${rng() > 0.4 ? '54,32,18' : '128,88,52'},${0.18 + rng() * 0.3})`;
+        ctx.lineWidth = 0.6 + rng() * 2.6;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        for (let y = 0; y <= s; y += 16) ctx.lineTo(x + Math.sin(y * 0.05 + i) * 5, y);
+        ctx.stroke();
+      }
+      blotches(ctx, s, rng, 10, '40,22,10', 10, 46, 0.3);
+    }, repeat, 128);
+  },
+
   label(text, { bg = '#0d100c', fg = '#9fd93a', sub = '' } = {}) {
     const key = `label:${text}:${sub}:${fg}`;
     if (cache.has(key)) return cache.get(key);

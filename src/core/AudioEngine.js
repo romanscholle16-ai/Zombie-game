@@ -154,43 +154,118 @@ class AudioEngine {
   }
 
   // --- weapons -------------------------------------------------------------
-  sfx_shoot({ volume = 1, pan = 0, weight = 'medium', suppressed = false } = {}) {
-    const t = this.t;
-    const profiles = {
-      light:  { dur: 0.14, lo: 240, hi: 3600, body: 150, punch: 0.55 },
-      medium: { dur: 0.2,  lo: 180, hi: 3000, body: 110, punch: 0.8 },
-      heavy:  { dur: 0.3,  lo: 120, hi: 2400, body: 78,  punch: 1.1 },
-      shotgun:{ dur: 0.4,  lo: 90,  hi: 2000, body: 62,  punch: 1.3 },
-      energy: { dur: 0.3,  lo: 400, hi: 5200, body: 220, punch: 0.9 },
-    };
-    const p = profiles[weight] || profiles.medium;
-    const v = volume * (suppressed ? 0.4 : 1);
+  /** Fallback voices, used when a weapon has no entry of its own. */
+  static WEIGHT_VOICES = {
+    light:  { crackHi: 3600, crackLo: 240, crackDur: 0.14, body: 150, punch: 0.55, tailDur: 0.2 },
+    medium: { crackHi: 3000, crackLo: 180, crackDur: 0.2,  body: 110, punch: 0.8,  tailDur: 0.3 },
+    heavy:  { crackHi: 2400, crackLo: 120, crackDur: 0.3,  body: 78,  punch: 1.1,  tailDur: 0.5 },
+    shotgun:{ crackHi: 2000, crackLo: 90,  crackDur: 0.4,  body: 62,  punch: 1.3,  tailDur: 0.6 },
+    energy: { crackHi: 5200, crackLo: 400, crackDur: 0.3,  body: 220, punch: 0.9,  tailDur: 0.5,
+      bodyType: 'sawtooth' },
+  };
 
-    // Crack: filtered noise burst.
-    const n = this._noiseSource(p.dur, 1);
+  /**
+   * A gunshot, layered: action noise, supersonic crack, pressure body, a
+   * resonant peak that gives the weapon its character, and room tail.
+   * `voice` comes from WeaponVoices; `weight` is the coarse fallback.
+   */
+  sfx_shoot({ volume = 1, pan = 0, weight = 'medium', suppressed = false, voice = null } = {}) {
+    const t = this.t;
+    const p = {
+      mech: 0.22, mechF: 3200, mechDur: 0.035,
+      crackQ: 0.9, crackLevel: 0.9, bodyMul: 2.2, bodyDur: 0.18, bodyType: 'triangle',
+      ring: 0, ringF: 900, ringQ: 9, ringDur: 0.14,
+      tail: 0.45, tailF: 700, detune: 0.03,
+      ...(AudioEngine.WEIGHT_VOICES[weight] ?? AudioEngine.WEIGHT_VOICES.medium),
+      ...(voice ?? {}),
+    };
+    const v = volume * (suppressed ? 0.4 : 1);
+    const jitter = 1 + (Math.random() - 0.5) * (p.detune ?? 0.03);
+
+    // ---- capacitor charge, for the weapons that have one
+    if (p.charge) {
+      const c = this.ctx.createOscillator();
+      c.type = 'sawtooth';
+      c.frequency.setValueAtTime(p.charge.from, t - p.charge.dur);
+      c.frequency.exponentialRampToValueAtTime(p.charge.to, t);
+      const cg = this.ctx.createGain();
+      cg.gain.setValueAtTime(0.0001, t - p.charge.dur);
+      cg.gain.exponentialRampToValueAtTime(p.charge.level * v, t - 0.005);
+      cg.gain.exponentialRampToValueAtTime(0.0001, t + 0.02);
+      c.connect(cg);
+      this._out(cg, { pan, reverb: 0.2 });
+      c.start(Math.max(this.ctx.currentTime, t - p.charge.dur));
+      c.stop(t + 0.06);
+    }
+
+    // ---- mechanical action: the sear breaking, the bolt travelling
+    if (p.mech > 0.001) {
+      const mn = this._noiseSource(p.mechDur, 1.4);
+      const mf = this.ctx.createBiquadFilter();
+      mf.type = 'bandpass';
+      mf.frequency.value = p.mechF * jitter;
+      mf.Q.value = 1.6;
+      const mg = this.ctx.createGain();
+      mg.gain.setValueAtTime(p.mech * v, t);
+      mg.gain.exponentialRampToValueAtTime(0.0001, t + p.mechDur);
+      mn.connect(mf); mf.connect(mg);
+      this._out(mg, { pan, reverb: 0.08 });
+    }
+
+    // ---- crack: the bullet's shockwave, sweeping down as it leaves
+    const n = this._noiseSource(p.crackDur, 1);
     const bp = this.ctx.createBiquadFilter();
     bp.type = 'bandpass';
-    bp.frequency.setValueAtTime(p.hi, t);
-    bp.frequency.exponentialRampToValueAtTime(p.lo, t + p.dur);
-    bp.Q.value = suppressed ? 3.2 : 0.9;
+    bp.frequency.setValueAtTime(p.crackHi * jitter, t);
+    bp.frequency.exponentialRampToValueAtTime(p.crackLo, t + p.crackDur);
+    bp.Q.value = suppressed ? 3.2 : p.crackQ;
     const g = this.ctx.createGain();
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.9 * v, t + 0.004);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + p.dur);
+    g.gain.exponentialRampToValueAtTime(p.crackLevel * v, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + p.crackDur);
     n.connect(bp); bp.connect(g);
     this._out(g, { pan, reverb: suppressed ? 0.1 : 0.45 });
 
-    // Body: pitched thump.
+    // ---- body: the pressure pulse that gives the shot its weight
     const o = this.ctx.createOscillator();
-    o.type = weight === 'energy' ? 'sawtooth' : 'triangle';
-    o.frequency.setValueAtTime(p.body * 2.2, t);
-    o.frequency.exponentialRampToValueAtTime(p.body * 0.5, t + p.dur * 0.8);
+    o.type = p.bodyType;
+    o.frequency.setValueAtTime(p.body * p.bodyMul * jitter, t);
+    o.frequency.exponentialRampToValueAtTime(p.body * 0.5, t + p.bodyDur * 0.85);
     const og = this.ctx.createGain();
     og.gain.setValueAtTime(p.punch * 0.5 * v, t);
-    og.gain.exponentialRampToValueAtTime(0.0001, t + p.dur * 0.9);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + p.bodyDur);
     o.connect(og);
     this._out(og, { pan, reverb: 0.25 });
-    o.start(t); o.stop(t + p.dur + 0.05);
+    o.start(t); o.stop(t + p.bodyDur + 0.05);
+
+    // ---- ring: barrel harmonic, receiver clang, or capacitor whine
+    if (p.ring > 0.001) {
+      const rn = this._noiseSource(p.ringDur, 1);
+      const rf = this.ctx.createBiquadFilter();
+      rf.type = 'bandpass';
+      rf.frequency.value = p.ringF * jitter;
+      rf.Q.value = p.ringQ;
+      const rg = this.ctx.createGain();
+      rg.gain.setValueAtTime(p.ring * v, t + 0.004);
+      rg.gain.exponentialRampToValueAtTime(0.0001, t + p.ringDur);
+      rn.connect(rf); rf.connect(rg);
+      this._out(rg, { pan, reverb: 0.4 });
+    }
+
+    // ---- tail: the room answering back
+    if (p.tail > 0.001 && !suppressed) {
+      const tn = this._noiseSource(p.tailDur, 0.7);
+      const tf = this.ctx.createBiquadFilter();
+      tf.type = 'lowpass';
+      tf.frequency.setValueAtTime(p.tailF, t);
+      tf.frequency.exponentialRampToValueAtTime(Math.max(90, p.tailF * 0.25), t + p.tailDur);
+      const tg = this.ctx.createGain();
+      tg.gain.setValueAtTime(0.0001, t);
+      tg.gain.exponentialRampToValueAtTime(p.tail * 0.32 * v, t + 0.03);
+      tg.gain.exponentialRampToValueAtTime(0.0001, t + p.tailDur);
+      tn.connect(tf); tf.connect(tg);
+      this._out(tg, { pan, reverb: 0.85 });
+    }
   }
 
   sfx_dryfire({ volume = 1, pan = 0 } = {}) {
