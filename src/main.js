@@ -22,6 +22,9 @@ void main(){
   gl_FragColor = mix(c, p, uAmount);
 }`;
 
+/** Tuned so the unpowered facility still reads on a bright monitor. */
+const BASE_EXPOSURE = 1.32;
+
 const COPY_FRAG = `
 uniform sampler2D tMap;
 varying vec2 vUv;
@@ -40,7 +43,7 @@ class App {
     this.renderer.shadowMap.enabled = Settings.quality.shadows;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.18;
+    this.renderer.toneMappingExposure = BASE_EXPOSURE * Settings.get('brightness');
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     this.game = null;
@@ -55,6 +58,7 @@ class App {
     Input.attach(this.canvas);
     this._wireInput();
 
+    Settings.on('change:brightness', () => this.applyBrightness());
     window.addEventListener('resize', () => this.resize());
     this.resize();
     this.applyQuality();
@@ -207,6 +211,10 @@ class App {
   }
 
   // ------------------------------------------------------------------ config
+  applyBrightness() {
+    this.renderer.toneMappingExposure = BASE_EXPOSURE * Settings.get('brightness');
+  }
+
   applyQuality() {
     const q = Settings.quality;
     this.renderer.shadowMap.enabled = q.shadows;

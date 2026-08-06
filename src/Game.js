@@ -91,7 +91,7 @@ export class Game {
   /** Helmet lamp — the annex is unlit until the grid comes back up. */
   _buildFlashlight() {
     this.flashlightOn = true;
-    this.flashlight = new THREE.SpotLight(0xfff0d8, 160, 40, 0.62, 0.5, 1.1);
+    this.flashlight = new THREE.SpotLight(0xfff0d8, 240, 46, 0.8, 0.55, 1.0);
     this.flashlight.position.set(0, 0, 0);
     this.flashlight.target.position.set(0, 0, -1);
     this.scene.add(this.flashlight);
@@ -109,7 +109,7 @@ export class Game {
     this.flashlight.position.copy(cam.position).addScaledVector(dir, 0.15);
     this.flashlight.target.position.copy(cam.position).addScaledVector(dir, 12);
     // Brighter while the grid is down; still a useful cone afterwards.
-    const want = this.flashlightOn ? (this.power.on ? 85 : 175) : 0;
+    const want = this.flashlightOn ? (this.power.on ? 120 : 260) : 0;
     this.flashlight.intensity += (want - this.flashlight.intensity) * clamp(dt * 8, 0, 1);
   }
 

@@ -556,7 +556,7 @@ namespace Rotgrid
         {
             Powered = on;
             foreach (var em in _emergency) Art.SetEmission(em.material, Util.Hex(0xff2b1e) * (on ? 0.05f : 1.4f));
-            foreach (var l in _emergencyLights) l.intensity = on ? 0f : 1.6f;
+            foreach (var l in _emergencyLights) l.intensity = on ? 0f : 2.6f;
         }
 
         public void Update(float dt, float time)
@@ -575,7 +575,7 @@ namespace Rotgrid
                     Art.SetEmission(l.bulb.material, l.light.color * (active ? 1.8f * flick : 0.05f));
             }
             if (_fill != null)
-                _fill.intensity = Mathf.Lerp(_fill.intensity, Powered ? 0.5f : 0.26f, Mathf.Clamp01(dt * 2f));
+                _fill.intensity = Mathf.Lerp(_fill.intensity, Powered ? 0.75f : 0.5f, Mathf.Clamp01(dt * 2f));
         }
 
         public void Dispose()

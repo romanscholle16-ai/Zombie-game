@@ -46,6 +46,7 @@ const DEFAULTS = {
   controllerSensitivity: 2.2,
   invertY: false,
   fov: 80,
+  brightness: 1.0,
   motionBlur: true,
   screenShake: true,
   quality: 'high',
@@ -81,6 +82,7 @@ class SettingsStore extends Emitter {
   set(k, v) {
     if (k === 'fov') v = clamp(v, 60, 120);
     if (['masterVolume', 'musicVolume', 'sfxVolume'].includes(k)) v = clamp(v, 0, 1);
+    if (k === 'brightness') v = clamp(v, 0.5, 2.0);
     if (k === 'mouseSensitivity') v = clamp(v, 0.02, 1.0);
     if (k === 'controllerSensitivity') v = clamp(v, 0.4, 8);
     if (this.data[k] === v) return;

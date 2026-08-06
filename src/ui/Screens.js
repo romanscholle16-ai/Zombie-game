@@ -331,6 +331,7 @@ export class ScreenManager {
     rows.push(el('div', { class: 'set-group' },
       el('h3', { text: 'Video' }),
       slider('Field of View', 'fov', 60, 120, 1, (v) => `${Math.round(v)}°`),
+      slider('Brightness', 'brightness', 0.5, 2, 0.05, (v) => `${Math.round(v * 100)}%`),
       select('Graphics Quality', 'quality', Object.entries(QUALITY_PRESETS).map(([k, v]) => [k, v.label])),
       toggle('Motion Blur', 'motionBlur'),
       toggle('Screen Shake', 'screenShake'),

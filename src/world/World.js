@@ -286,7 +286,7 @@ export class World extends Emitter {
   }
 
   _buildLights(q) {
-    const ambient = new THREE.HemisphereLight(0x38465a, 0x0d1114, 0.75);
+    const ambient = new THREE.HemisphereLight(0x4a5c72, 0x14191d, 1.1);
     this.scene.add(ambient);
     this.hemi = ambient;
 
@@ -327,7 +327,7 @@ export class World extends Emitter {
       this.root.add(em);
       this.emergency.push(em);
       if (this.emergencyLights.length < 6) {
-        const rl = new THREE.PointLight(0xff3b24, 14, 14);
+        const rl = new THREE.PointLight(0xff5a3a, 26, 19);
         rl.position.set(l.x + 0.6, l.y + 0.1, l.z);
         this.root.add(rl);
         this.emergencyLights.push({ light: rl, zone: l.zone });
@@ -515,7 +515,7 @@ export class World extends Emitter {
     for (const em of this.emergency) {
       em.material.emissiveIntensity = on ? 0.05 : 1.4;
     }
-    for (const e of this.emergencyLights) e.light.intensity = on ? 0 : 14;
+    for (const e of this.emergencyLights) e.light.intensity = on ? 0 : 26;
     this.emit('power', on);
   }
 
@@ -527,11 +527,11 @@ export class World extends Emitter {
     for (const l of this.lights) {
       const active = this.powered && this.isZoneActive(l.zone);
       const flick = active ? 0.86 + Math.sin(time * 9.3 + l.flicker) * 0.05 + Math.sin(time * 31 + l.flicker * 3) * 0.03 : 0;
-      const target = active ? l.base * flick * 70 : l.base * 14;
+      const target = active ? l.base * flick * 70 : l.base * 30;
       l.light.intensity += (target - l.light.intensity) * Math.min(1, dt * 6);
       l.bulb.material.emissiveIntensity = active ? 1.8 * flick : 0.05;
     }
-    this.hemi.intensity += ((this.powered ? 1.05 : 0.62) - this.hemi.intensity) * Math.min(1, dt * 2);
+    this.hemi.intensity += ((this.powered ? 1.5 : 1.05) - this.hemi.intensity) * Math.min(1, dt * 2);
   }
 
   dispose() {
