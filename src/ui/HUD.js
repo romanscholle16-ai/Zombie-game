@@ -216,6 +216,9 @@ export class HUD {
   }
 
   setPrompt(data) {
+    // The touch layer shows its USE button only when there is something in
+    // reach, so it needs to hear about this too.
+    this.onPromptChange?.(!!data && !data.blocked);
     if (!data) {
       if (this._promptState !== '') {
         this.prompt.classList.add('hidden');

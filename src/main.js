@@ -4,6 +4,7 @@ import { ScreenManager } from './ui/Screens.js';
 import { MenuBackground } from './ui/MenuBackground.js';
 import { Settings } from './core/Settings.js';
 import { Input } from './core/Input.js';
+import { TouchControls } from './core/TouchControls.js';
 import { Audio } from './core/AudioEngine.js';
 import { Assets } from './world/AssetLibrary.js';
 import { clamp, el } from './core/Util.js';
@@ -57,9 +58,20 @@ class App {
 
     this._initPost();
     Input.attach(this.canvas);
+    this.touch = new TouchControls(Input);
+    this.touch.onPause = () => this.pause();
+    this._applyTouchMode();
     this._wireInput();
 
     Settings.on('change:brightness', () => this.applyBrightness());
+    // Changing the touch options mid-session should take effect immediately.
+    Settings.on('change:touchControls', () => {
+      Input.touchActive = TouchControls.shouldEnable();
+      document.body.classList.toggle('touch', Input.touchActive);
+      this.touch.setEnabled(Input.touchActive && this.state === 'playing' && !this.screens.active);
+      this.applyQuality();
+    });
+    Settings.on('change:touchLefty', (v) => this.touch.root?.classList.toggle('lefty', !!v));
     window.addEventListener('resize', () => this.resize());
     this.resize();
     this.applyQuality();
@@ -159,16 +171,20 @@ class App {
     if (this.game) { this.game.dispose(); this.game = null; }
     this.screens.hide();
     this.game = new Game(this);
+    this.game.hud.onPromptChange = (avail) => this.touch.setInteractVisible(avail);
     window.__game = this.game;   // debug handle
     this.resize();
     this.state = 'playing';
+    this.touch.setEnabled(Input.touchActive);
     await this._fade(false);
-    Input.requestLock();
+    // Pointer lock is meaningless on a touchscreen and prompts on some phones.
+    if (!Input.touchActive) Input.requestLock();
   }
 
   pause() {
     if (!this.game || this.game.over) return;
     this.game.paused = true;
+    this.touch.setEnabled(false);
     Input.releaseLock();
     this.screens.stack.length = 0;
     this.screens.show('pause', { force: true });
@@ -178,7 +194,8 @@ class App {
     if (!this.game) return;
     this.game.paused = false;
     this.screens.hide();
-    Input.requestLock();
+    this.touch.setEnabled(Input.touchActive);
+    if (!Input.touchActive) Input.requestLock();
   }
 
   async restart() {
@@ -189,6 +206,7 @@ class App {
     this.state = 'loading';
     await this._fade(true);
     if (this.game) { this.game.dispose(); this.game = null; }
+    this.touch.setEnabled(false);
     this.state = 'menu';
     this.screens.show('main', { force: true });
     Audio.startMusic();
@@ -197,6 +215,7 @@ class App {
 
   onGameOver(summary) {
     this.state = 'gameover';
+    this.touch.setEnabled(false);
     setTimeout(() => {
       this.screens.show('gameover', { force: true, summary });
       Audio.startMusic();
@@ -223,10 +242,32 @@ class App {
     this.renderer.toneMappingExposure = BASE_EXPOSURE * Settings.get('brightness');
   }
 
+  /**
+   * Turns the on-screen controls on for touch devices and picks defaults that
+   * a phone can actually sustain. Only applied the first time — after that the
+   * player's own settings win.
+   */
+  _applyTouchMode() {
+    const on = TouchControls.shouldEnable();
+    Input.touchActive = on;
+    document.body.classList.toggle('touch', on);
+    this.touch.setEnabled(false);          // menus first; enabled on match start
+    if (!on || Settings.get('mobileTuned')) return;
+    // A phone GPU will not hold 40 zombies with shadows and a blur pass.
+    Settings.set('quality', 'low');
+    Settings.set('motionBlur', false);
+    Settings.set('fov', 74);
+    Settings.set('mobileTuned', true);
+    this.applyQuality();
+  }
+
   applyQuality() {
     const q = Settings.quality;
     this.renderer.shadowMap.enabled = q.shadows;
-    this.renderer.setPixelRatio(clamp(window.devicePixelRatio * q.pixelRatio, 0.5, 2.2));
+    // Phones report device pixel ratios of 3 and up; rendering at that is the
+    // single fastest way to melt a mobile GPU, so it is capped hard here.
+    const ceiling = Input.touchActive ? 1.35 : 2.2;
+    this.renderer.setPixelRatio(clamp(window.devicePixelRatio * q.pixelRatio, 0.5, ceiling));
     this.resize();
   }
 
@@ -346,5 +387,13 @@ window.addEventListener('error', (e) => {
     l.querySelector('.loading-tip').textContent = `Failed to start: ${e.message}`;
   }
 });
+
+// Register the offline worker so the game can be installed to a home screen.
+// It is optional: a failure here just means no offline play.
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
 
 new App();

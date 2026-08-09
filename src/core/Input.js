@@ -21,6 +21,10 @@ class InputManager extends Emitter {
     this.captureCallback = null;    // keybind rebinding hook
     this.gamepadIndex = null;
     this.pad = { lx: 0, ly: 0, rx: 0, ry: 0, buttons: new Set(), prevButtons: new Set() };
+    // On-screen controls write here; every query below folds it in, so game
+    // code never has to know whether it is being played with a thumb or a mouse.
+    this.touch = { lx: 0, ly: 0, dx: 0, dy: 0, buttons: new Set(), prev: new Set(), tapFire: 0 };
+    this.touchActive = false;
     this._bound = false;
   }
 
@@ -121,12 +125,16 @@ class InputManager extends Emitter {
   isDown(action) {
     const code = Settings.bind(action);
     if (code && this.down.has(code)) return true;
+    if (this.touch.buttons.has(action)) return true;
+    if (action === 'fire' && this.touch.tapFire > 0) return true;
     return this._padAction(action, false);
   }
 
   wasPressed(action) {
     const code = Settings.bind(action);
     if (code && this.pressed.has(code)) return true;
+    if (this.touch.buttons.has(action) && !this.touch.prev.has(action)) return true;
+    if (action === 'fire' && this.touch.tapFire === 2) return true;
     return this._padAction(action, true);
   }
 
@@ -152,8 +160,8 @@ class InputManager extends Emitter {
     if (this.isDown('back')) y -= 1;
     if (this.isDown('right')) x += 1;
     if (this.isDown('left')) x -= 1;
-    x += this.pad.lx;
-    y += -this.pad.ly;
+    x += this.pad.lx + this.touch.lx;
+    y += -this.pad.ly - this.touch.ly;
     const len = Math.hypot(x, y);
     if (len > 1) { x /= len; y /= len; }
     return { x, y };
@@ -170,6 +178,14 @@ class InputManager extends Emitter {
     const curve = (v) => Math.sign(v) * v * v;   // quadratic response for fine aim
     yaw += -curve(this.pad.rx) * cs * dt;
     pitch += -curve(this.pad.ry) * cs * dt * inv;
+
+    // Drag-to-look. Touch aiming is measured in screen pixels like the mouse,
+    // but wants its own sensitivity — a thumb travels a lot less than a hand.
+    const ts = Settings.get('touchSensitivity');
+    yaw += -this.touch.dx * ts * 0.0022;
+    pitch += -this.touch.dy * ts * 0.0022 * inv;
+    this.touch.dx = 0;
+    this.touch.dy = 0;
 
     // Arrow keys always steer, so the game stays playable anywhere pointer
     // lock is unavailable (embedded frames, restricted browsers).
@@ -208,6 +224,8 @@ class InputManager extends Emitter {
     this.pressed.clear();
     this.released.clear();
     this.wheel = 0;
+    this.touch.prev = new Set(this.touch.buttons);
+    if (this.touch.tapFire > 0) this.touch.tapFire--;
   }
 }
 

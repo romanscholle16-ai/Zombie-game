@@ -2,7 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no, maximum-scale=1" />
+<meta name="theme-color" content="#05070a" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Rotgrid" />
+<link rel="manifest" href="./manifest.webmanifest" />
 <title>ROTGRID — Round Based Survival</title>
 <link rel="stylesheet" href="./styles/main.css" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>&#129503;</text></svg>" />
@@ -107,6 +113,11 @@
   <!-- ============================ MENUS ============================ -->
   <div id="menu-root" class="layer"></div>
   <div id="fade" class="fade"></div>
+  <div class="rotate-prompt" id="rotate-prompt">
+    <div class="rp-icon">&#128241;</div>
+    <div class="rp-text">ROTATE YOUR DEVICE</div>
+    <div class="rp-sub">Rotgrid is played in landscape. Turn the phone sideways to deploy.</div>
+  </div>
   <div id="loading" class="loading"><div class="loading-inner"><div class="loading-title">ROTGRID</div><div class="loading-bar"><i></i></div><div class="loading-tip">Generating facility…</div></div></div>
 </div>
 <script type="module" src="./src/main.js"></script>

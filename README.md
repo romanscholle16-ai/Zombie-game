@@ -53,6 +53,7 @@ binary you already have).
 | Reload | `R` |
 | Melee | `V` |
 | Swap weapon | `Q` (or `1` / `2`) |
+| _On a phone_ | left thumb moves, drag right to look, buttons bottom-right |
 | Interact / buy / repair | `F` (hold `F` on a broken barrier to renail it) |
 | Flashlight | `L` |
 | Pause | `ESC` |
@@ -194,6 +195,30 @@ a time and can be renailed for points.
 | Round cleared | 50 + 10 × round |
 
 ---
+
+## Playing on a phone
+
+The browser build is a full mobile game. Serve it over HTTPS (or `http://localhost`)
+and open it on the phone — on a touchscreen it switches itself over:
+
+- **On-screen controls.** A floating movement stick springs up wherever your left
+  thumb lands, look is a drag anywhere on the right, and fire sits under your
+  right thumb with aim, reload, jump, knife, crouch and swap arced above it. The
+  USE key only appears when something is in reach. Push the stick to its edge to
+  sprint. Tapping the right side fires, so you can shoot with the aiming thumb.
+- **It installs.** "Add to Home Screen" on iOS or "Install app" on Android gives
+  you a fullscreen, landscape, offline-capable game with its own icon — the
+  service worker precaches the build, so it runs with no connection.
+- **It tunes itself.** First launch on a touch device drops to the low preset,
+  turns motion blur off and caps the pixel ratio at 1.35, because phones report
+  device pixel ratios of 3 and rendering at that melts a mobile GPU. Change any
+  of it in Settings afterwards and your choice sticks.
+
+Settings ▸ Touch controls has sensitivity, a left-handed layout, a tap-to-fire
+toggle, and an override to force the on-screen controls on or off (useful for
+testing the touch layout on a desktop).
+
+Everything is landscape — portrait shows a rotate prompt.
 
 ## Using your own 3D models
 

@@ -53,6 +53,12 @@ const DEFAULTS = {
   fullscreen: false,
   showDamageNumbers: true,
   crosshair: true,
+  // Touch: 'auto' turns the on-screen controls on for coarse-pointer devices.
+  touchControls: 'auto',
+  touchSensitivity: 0.55,
+  touchLefty: false,
+  touchTapFire: true,
+  mobileTuned: false,   // set once, so mobile defaults never re-clobber choices
   binds: { ...DEFAULT_BINDS },
 };
 
@@ -84,6 +90,7 @@ class SettingsStore extends Emitter {
     if (['masterVolume', 'musicVolume', 'sfxVolume'].includes(k)) v = clamp(v, 0, 1);
     if (k === 'brightness') v = clamp(v, 0.5, 2.0);
     if (k === 'mouseSensitivity') v = clamp(v, 0.02, 1.0);
+    if (k === 'touchSensitivity') v = clamp(v, 0.1, 2.0);
     if (k === 'controllerSensitivity') v = clamp(v, 0.4, 8);
     if (this.data[k] === v) return;
     this.data[k] = v;

@@ -146,7 +146,11 @@ export class ScreenManager {
         el('span', { html: `HIGHEST ROUND <b>${s.highestRound}</b>` }),
         el('span', { html: `LIFETIME KILLS <b>${formatNumber(s.lifetimeKills)}</b>` }),
         el('span', { html: `RUNS <b>${s.gamesPlayed}</b>` }),
-        el('span', { html: 'MOVE <b>WASD</b> · LOOK <b>MOUSE</b> or <b>ARROWS</b> · FIRE <b>LMB</b> · USE <b>F</b>' })));
+        el('span', {
+          html: Input.touchActive
+            ? 'MOVE <b>LEFT THUMB</b> · LOOK <b>DRAG RIGHT</b> · SPRINT <b>PUSH STICK</b> · <b>TAP TO FIRE</b>'
+            : 'MOVE <b>WASD</b> · LOOK <b>MOUSE</b> or <b>ARROWS</b> · FIRE <b>LMB</b> · USE <b>F</b>',
+        })));
   }
 
   // ---------------------------------------------------------------- solo
@@ -327,6 +331,15 @@ export class ScreenManager {
       slider('Mouse Sensitivity', 'mouseSensitivity', 0.02, 1, 0.01, (v) => v.toFixed(2)),
       slider('Controller Sensitivity', 'controllerSensitivity', 0.4, 8, 0.1, (v) => v.toFixed(1)),
       toggle('Invert Vertical Look', 'invertY')));
+
+    rows.push(el('div', { class: 'set-group' },
+      el('h3', { text: 'Touch controls' }),
+      select('On-screen Controls', 'touchControls', [
+        ['auto', 'Auto (on for touchscreens)'], ['on', 'Always on'], ['off', 'Always off'],
+      ]),
+      slider('Touch Look Sensitivity', 'touchSensitivity', 0.1, 2, 0.05, (v) => v.toFixed(2)),
+      toggle('Left-handed Layout', 'touchLefty'),
+      toggle('Tap Right Side to Fire', 'touchTapFire')));
 
     rows.push(el('div', { class: 'set-group' },
       el('h3', { text: 'Video' }),

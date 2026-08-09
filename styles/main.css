@@ -390,3 +390,159 @@ select,input[type=text]{background:#12171a;border:1px solid rgba(255,255,255,.16
   .set-row{grid-template-columns:1fr 1.4fr 52px}
   .go-stats{grid-template-columns:repeat(2,1fr)}
 }
+
+/* ============================================================== touch controls
+   Sized against the shorter screen edge so the layout holds from a small phone
+   to a tablet, and inset from the notch/home-indicator safe areas. Nothing here
+   renders at all until the touch layer is switched on. */
+:root{
+  --tsafe-l:env(safe-area-inset-left,0px);
+  --tsafe-r:env(safe-area-inset-right,0px);
+  --tsafe-b:env(safe-area-inset-bottom,0px);
+  --tsafe-t:env(safe-area-inset-top,0px);
+  /* Sized off the shorter edge: phone landscape viewports are very short, and
+     scaling buttons off width alone eats half the screen height. */
+  --tunit:clamp(34px,11.5vmin,68px);
+}
+.touch-layer{position:absolute;inset:0;z-index:40;display:none;touch-action:none;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+.touch-layer.on{display:block}
+
+/* Floating movement stick — springs up wherever the left thumb lands. */
+.tstick{position:absolute;width:0;height:0;pointer-events:none}
+.tstick-ring,.tstick-nub{position:absolute;border-radius:50%;transform:translate(-50%,-50%)}
+.tstick-ring{width:124px;height:124px;border:2px solid rgba(159,217,58,.34);
+  background:radial-gradient(circle,rgba(0,0,0,.34) 0%,rgba(0,0,0,.14) 70%,transparent 100%)}
+.tstick-nub{width:54px;height:54px;border:2px solid rgba(159,217,58,.75);
+  background:rgba(159,217,58,.2);box-shadow:0 0 16px -4px rgba(159,217,58,.8)}
+
+.tbuttons{position:absolute;right:calc(var(--tsafe-r) + 10px);bottom:calc(var(--tsafe-b) + 10px);
+  width:calc(var(--tunit) * 4.6);height:calc(var(--tunit) * 3.4);pointer-events:none}
+.touch-layer.lefty .tbuttons{right:auto;left:calc(var(--tsafe-l) + 10px);transform:scaleX(-1)}
+.touch-layer.lefty .tbuttons .tbtn span{transform:scaleX(-1)}
+
+.tbtn{position:absolute;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;border:2px solid rgba(226,236,214,.3);background:rgba(10,14,12,.42);
+  color:rgba(226,236,214,.86);font-family:var(--ui,inherit);font-size:9px;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;pointer-events:auto;padding:0;
+  backdrop-filter:blur(2px);transition:transform .06s,background .06s,border-color .06s}
+.tbtn.held{background:rgba(159,217,58,.34);border-color:rgba(159,217,58,.9);transform:scale(.93)}
+.tbtn span{pointer-events:none}
+
+/* Fire under the thumb, everything else arced above and inboard of it. */
+.tb-fire{right:0;bottom:0;width:calc(var(--tunit) * 1.62);height:calc(var(--tunit) * 1.62);
+  border-color:rgba(226,76,58,.6);background:rgba(120,30,22,.34);font-size:11px}
+.tb-ads{right:calc(var(--tunit) * 1.74);bottom:calc(var(--tunit) * .16);
+  width:var(--tunit);height:var(--tunit)}
+.tb-reload{right:calc(var(--tunit) * .18);bottom:calc(var(--tunit) * 1.78);
+  width:var(--tunit);height:var(--tunit)}
+.tb-jump{right:calc(var(--tunit) * 1.6);bottom:calc(var(--tunit) * 1.42);
+  width:calc(var(--tunit) * .88);height:calc(var(--tunit) * .88)}
+.tb-melee{right:calc(var(--tunit) * 2.72);bottom:calc(var(--tunit) * .1);
+  width:calc(var(--tunit) * .84);height:calc(var(--tunit) * .84)}
+.tb-crouch{right:calc(var(--tunit) * 2.6);bottom:calc(var(--tunit) * 1.06);
+  width:calc(var(--tunit) * .84);height:calc(var(--tunit) * .84)}
+.tb-swap{right:calc(var(--tunit) * 1.34);bottom:calc(var(--tunit) * 2.44);
+  width:calc(var(--tunit) * .84);height:calc(var(--tunit) * .84)}
+/* USE only appears when there is something in reach to use. */
+.tb-use{right:calc(var(--tunit) * 3.5);bottom:calc(var(--tunit) * 1.1);
+  width:calc(var(--tunit) * 1.1);height:calc(var(--tunit) * 1.1);
+  border-color:rgba(159,217,58,.75);background:rgba(159,217,58,.18);
+  opacity:0;transform:scale(.7);pointer-events:none;transition:opacity .12s,transform .12s}
+.tb-use.avail{opacity:1;transform:scale(1);pointer-events:auto}
+
+.tb-pause{position:absolute;top:calc(var(--tsafe-t) + 8px);right:calc(var(--tsafe-r) + 8px);
+  width:38px;height:38px;font-size:12px;letter-spacing:.14em}
+.touch-layer.lefty .tb-pause{right:auto;left:calc(var(--tsafe-l) + 8px)}
+
+/* ---- phone-sized screens: pull the HUD in and scale the type down ---- */
+@media (max-width:900px),(pointer:coarse){
+  .hud-corner{padding:calc(var(--tsafe-t) + 8px) calc(var(--tsafe-r) + 10px)
+              calc(var(--tsafe-b) + 8px) calc(var(--tsafe-l) + 10px)}
+  .round-number{font-size:34px}
+  .score-points{font-size:24px}
+  .weapon-name{font-size:13px}
+  .ammo-mag{font-size:30px}
+  .prompt{top:calc(50% + 44px);max-width:78vw}
+  .prompt .pd{max-width:60vw}
+  .toast{font-size:11px}
+  .panel{width:min(96vw,860px);max-height:88vh}
+  .menu-item{padding:9px 14px;font-size:15px}
+  .brand-title{font-size:clamp(30px,8vw,58px)}
+  .menu-foot{font-size:9px;gap:10px;flex-wrap:wrap}
+  .loadout-wrap{grid-template-columns:minmax(0,1fr)}
+  .wep-list{max-height:26vh}
+}
+
+/* ---- portrait: the game is landscape-only, so ask for a turn ---- */
+.rotate-prompt{position:fixed;inset:0;z-index:400;display:none;
+  align-items:center;justify-content:center;flex-direction:column;gap:18px;
+  background:#05070a;color:var(--acid,#9fd93a);text-align:center;padding:24px}
+.rotate-prompt .rp-icon{font-size:52px;animation:rp-turn 2.2s ease-in-out infinite}
+.rotate-prompt .rp-text{letter-spacing:.24em;font-size:13px;font-weight:700}
+.rotate-prompt .rp-sub{letter-spacing:.1em;font-size:11px;color:#8a8f8c;max-width:280px;line-height:1.6}
+@keyframes rp-turn{0%,40%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
+@media (orientation:portrait) and (pointer:coarse){
+  .rotate-prompt{display:flex}
+}
+
+
+/* ---- keep the HUD clear of the thumbs -------------------------------------
+   The button cluster owns the bottom-right corner, which is where the weapon
+   panel normally lives, and the pause key would otherwise sit on the score. */
+body.touch .hud-br{right:calc(var(--tsafe-r) + var(--tunit) * 4.9);bottom:calc(var(--tsafe-b) + 4px)}
+body.touch .hud-br .weapon-panel{text-align:right}
+body.touch .hud-bl{bottom:calc(var(--tsafe-b) + 2px);left:calc(var(--tsafe-l) + 8px)}
+body.touch .tb-pause{left:50%;right:auto;transform:translateX(-50%)}
+body.touch .touch-layer.lefty .tb-pause{left:50%;right:auto}
+body.touch .prompt{top:auto;bottom:calc(var(--tsafe-b) + var(--tunit) * 3.7);
+  font-size:12px;max-width:56vw}
+body.touch .prompt .pt{font-size:12px}
+body.touch .prompt .pd{display:none}          /* no room for prose over a thumb */
+body.touch .toast-stack{transform:translateY(-18px)}
+body.touch .powerup-tray{bottom:calc(var(--tsafe-b) + var(--tunit) * 3.9)}
+
+/* Short landscape viewports: the type has to come down or it swamps the view. */
+@media (max-height:460px) and (pointer:coarse){
+  .round-number{font-size:24px}
+  .round-label{font-size:8px}
+  .zombies-left{font-size:9px}
+  .score-points{font-size:17px}
+  .score-name,.score-sub,.score-time{font-size:8px}
+  .weapon-name{font-size:10px}
+  .ammo-mag{font-size:20px}
+  .ammo-res{font-size:11px}
+  .weapon-alt{font-size:8px}
+  .health-bar,.armor-bar{width:120px}
+  .perk-chip{width:20px;height:20px;font-size:10px}
+  .round-banner .rb-text{font-size:clamp(20px,5vw,34px)}
+  .tbtn{font-size:7.5px}
+  .tb-fire{font-size:9px}
+}
+
+/* The title block eats a short landscape viewport and pushes the menu off the
+   bottom of the screen, so on phones it gets a lot tighter. */
+@media (max-height:460px) and (pointer:coarse){
+  .brand{padding:10px 0 0 clamp(16px,4vw,40px)}
+  .brand-title{font-size:clamp(26px,6.4vw,44px)}
+  .brand-sub{margin-top:4px;font-size:8px;letter-spacing:.34em}
+  .brand-rule{margin-top:8px;width:min(300px,40vw)}
+  .menu-body{padding:0 clamp(16px,4vw,40px);align-items:flex-start}
+  .menu-list{gap:1px;min-width:min(320px,52vw);max-height:60vh;overflow-y:auto;
+    scrollbar-width:none}
+  .menu-list::-webkit-scrollbar{display:none}
+  .menu-item{padding:6px 12px 6px 10px;font-size:12px;gap:9px}
+  .menu-item .idx{font-size:8px;min-width:16px}
+  .menu-foot{padding:0 clamp(16px,4vw,40px) 6px;font-size:8px;gap:10px}
+  .panel{padding:10px clamp(14px,4vw,34px)}
+  .panel-head{padding-bottom:8px;margin-bottom:10px}
+  .panel-title{font-size:clamp(16px,3.4vw,24px)}
+  .panel-hint{font-size:8px}
+  .set-row{grid-template-columns:minmax(110px,1fr) 1.6fr minmax(48px,auto);
+    gap:10px;padding:5px 4px}
+  .set-row label{font-size:11px}
+  .set-group h3{font-size:9px;margin-bottom:6px}
+  .btn{padding:8px 16px;font-size:11px}
+  .stat-card{padding:8px 10px}
+  .downed-title{font-size:20px}
+}
