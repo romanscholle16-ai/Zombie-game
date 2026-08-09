@@ -149,7 +149,9 @@ export class ScreenManager {
         el('span', {
           html: Input.touchActive
             ? 'MOVE <b>LEFT THUMB</b> · LOOK <b>DRAG RIGHT</b> · SPRINT <b>PUSH STICK</b> · <b>TAP TO FIRE</b>'
-            : 'MOVE <b>WASD</b> · LOOK <b>MOUSE</b> or <b>ARROWS</b> · FIRE <b>LMB</b> · USE <b>F</b>',
+            : Input.lockUnavailable
+              ? 'MOVE <b>WASD</b> · LOOK <b>DRAG</b> or <b>ARROWS</b> · FIRE <b>CLICK</b> · USE <b>F</b>'
+              : 'MOVE <b>WASD</b> · LOOK <b>MOUSE</b> or <b>ARROWS</b> · FIRE <b>LMB</b> · USE <b>F</b>',
         })));
   }
 

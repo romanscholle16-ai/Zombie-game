@@ -332,6 +332,7 @@ select,input[type=text]{background:#12171a;border:1px solid rgba(255,255,255,.16
 @keyframes toast{from{opacity:0;transform:translateY(8px) scale(.9)}to{opacity:1;transform:none}}
 @keyframes toast-out{to{opacity:0;transform:translateY(-14px)}}
 .toast.pts{color:var(--acid)}.toast.warn{color:var(--amber)}.toast.bad{color:var(--blood)}
+.toast.info{color:#9ec9e8}
 .toast.big{font-size:22px;letter-spacing:.3em}
 
 .damage-vignette{position:absolute;inset:0;pointer-events:none;opacity:0;

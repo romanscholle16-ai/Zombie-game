@@ -23,8 +23,15 @@ class InputManager extends Emitter {
     this.pad = { lx: 0, ly: 0, rx: 0, ry: 0, buttons: new Set(), prevButtons: new Set() };
     // On-screen controls write here; every query below folds it in, so game
     // code never has to know whether it is being played with a thumb or a mouse.
-    this.touch = { lx: 0, ly: 0, dx: 0, dy: 0, buttons: new Set(), prev: new Set(), tapFire: 0 };
+    this.touch = { lx: 0, ly: 0, dx: 0, dy: 0, buttons: new Set(), prev: new Set() };
     this.touchActive = false;
+    // Set by a tap (touch) or a click that did not drag (mouse fallback).
+    // Held for two frames so both the edge and the held test see it.
+    this.tapFire = 0;
+    // Pointer lock is refused inside many embedding frames. When that happens
+    // the mouse falls back to drag-to-look, so the game stays playable there.
+    this.lockUnavailable = false;
+    this.drag = null;
     this._bound = false;
   }
 
@@ -49,8 +56,25 @@ class InputManager extends Emitter {
   // ---------------------------------------------------------------- pointer lock
   requestLock() {
     if (this.locked || !this.canvas) return;
-    const p = this.canvas.requestPointerLock?.();
-    if (p && typeof p.catch === 'function') p.catch(() => {});
+    if (this.touchActive) return;              // meaningless on a touchscreen
+    let rejected = false;
+    try {
+      const p = this.canvas.requestPointerLock?.();
+      if (p && typeof p.catch === 'function') {
+        p.catch(() => { rejected = true; this.lockUnavailable = true; this.emit('lockfallback', true); });
+      }
+    } catch {
+      rejected = true;
+      this.lockUnavailable = true;
+    }
+    // Some browsers refuse silently rather than rejecting, so confirm shortly
+    // after that the lock actually took.
+    setTimeout(() => {
+      if (!this.locked && !rejected) {
+        this.lockUnavailable = true;
+        this.emit('lockfallback', true);
+      }
+    }, 400);
   }
 
   releaseLock() {
@@ -94,6 +118,13 @@ class InputManager extends Emitter {
       cb(code);
       return;
     }
+    // Without pointer lock, the left button aims instead of firing: drag to
+    // look, and a click that never really moved counts as the shot.
+    if (this.lockUnavailable && !this.locked && e.button === 0 && e.target === this.canvas) {
+      this.drag = { x: e.clientX, y: e.clientY, moved: 0 };
+      this.emit('mousedown', code, e);
+      return;
+    }
     this.down.add(code);
     this.pressed.add(code);
     this.emit('mousedown', code, e);
@@ -101,11 +132,26 @@ class InputManager extends Emitter {
 
   _onMouseUp = (e) => {
     const code = `Mouse${e.button}`;
+    if (this.drag && e.button === 0) {
+      if (this.drag.moved < 9) this.tapFire = 2;
+      this.drag = null;
+      return;
+    }
     this.down.delete(code);
     this.released.add(code);
   };
 
   _onMouseMove = (e) => {
+    if (this.drag) {
+      const dx = e.clientX - this.drag.x;
+      const dy = e.clientY - this.drag.y;
+      this.drag.x = e.clientX;
+      this.drag.y = e.clientY;
+      this.drag.moved += Math.abs(dx) + Math.abs(dy);
+      this.mouseDX += dx;
+      this.mouseDY += dy;
+      return;
+    }
     if (!this.locked) return;
     this.mouseDX += e.movementX || 0;
     this.mouseDY += e.movementY || 0;
@@ -116,6 +162,7 @@ class InputManager extends Emitter {
   clearHeld() {
     this.down.clear();
     this.pad.buttons.clear();
+    this.drag = null;
   }
 
   /** Capture the next key/mouse press for rebinding. */
@@ -126,7 +173,7 @@ class InputManager extends Emitter {
     const code = Settings.bind(action);
     if (code && this.down.has(code)) return true;
     if (this.touch.buttons.has(action)) return true;
-    if (action === 'fire' && this.touch.tapFire > 0) return true;
+    if (action === 'fire' && this.tapFire > 0) return true;
     return this._padAction(action, false);
   }
 
@@ -134,7 +181,7 @@ class InputManager extends Emitter {
     const code = Settings.bind(action);
     if (code && this.pressed.has(code)) return true;
     if (this.touch.buttons.has(action) && !this.touch.prev.has(action)) return true;
-    if (action === 'fire' && this.touch.tapFire === 2) return true;
+    if (action === 'fire' && this.tapFire === 2) return true;
     return this._padAction(action, true);
   }
 
@@ -225,7 +272,7 @@ class InputManager extends Emitter {
     this.released.clear();
     this.wheel = 0;
     this.touch.prev = new Set(this.touch.buttons);
-    if (this.touch.tapFire > 0) this.touch.tapFire--;
+    if (this.tapFire > 0) this.tapFire--;
   }
 }
 

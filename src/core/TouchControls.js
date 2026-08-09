@@ -110,6 +110,7 @@ export class TouchControls {
     const t = this.input.touch;
     t.lx = t.ly = t.dx = t.dy = 0;
     t.buttons.clear();
+    this.input.tapFire = 0;
   }
 
   // ------------------------------------------------------------------ events
@@ -214,7 +215,7 @@ export class TouchControls {
     // A tap on the look area that never really moved fires a shot, so you can
     // shoot with the aiming thumb without reaching for the button.
     if (p.kind === 'look' && p.moved < 12 && Settings.get('touchTapFire')) {
-      this.input.touch.tapFire = 2;   // held for two frames so the edge is seen
+      this.input.tapFire = 2;   // held for two frames so the edge is seen
     }
   }
 }

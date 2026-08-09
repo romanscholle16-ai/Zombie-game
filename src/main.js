@@ -136,6 +136,15 @@ class App {
       if (this.state === 'playing' && !this.screens.active) Input.requestLock();
     });
 
+    // Embedded frames often refuse pointer lock. Tell the player how to aim
+    // rather than leaving them stuck facing one wall.
+    Input.on('lockfallback', () => {
+      if (this._toldAboutDrag) return;
+      this._toldAboutDrag = true;
+      document.body.classList.add('drag-look');
+      this.game?.hud.toast('DRAG TO LOOK · CLICK TO FIRE', 'info', true);
+    });
+
     Input.on('lockchange', (locked) => {
       document.body.classList.toggle('playing', locked);
       if (!locked && this.state === 'playing' && !this.screens.active && this.game && !this.game.over) {
