@@ -9,6 +9,16 @@ import { Audio } from './core/AudioEngine.js';
 import { Assets } from './world/AssetLibrary.js';
 import { clamp, el } from './core/Util.js';
 
+// An artifact or any other host embeds this in a frame it sizes from our
+// scrollHeight. Flag it before first layout so the stylesheet can put the app
+// in flow instead of pinning it to a viewport the host has not sized yet.
+if (window.self !== window.top) {
+  document.documentElement.classList.add('embedded');
+  document.body?.classList.add('embedded');
+  document.addEventListener('DOMContentLoaded',
+    () => document.body.classList.add('embedded'), { once: true });
+}
+
 const BLEND_VERT = `
 varying vec2 vUv;
 void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
@@ -73,6 +83,12 @@ class App {
     });
     Settings.on('change:touchLefty', (v) => this.touch.root?.classList.toggle('lefty', !!v));
     window.addEventListener('resize', () => this.resize());
+    // The host resizes the frame around us; a window resize event is not
+    // guaranteed for that, so watch the app box itself.
+    if (window.ResizeObserver) {
+      const ro = new ResizeObserver(() => this.resize());
+      ro.observe(document.getElementById('app'));
+    }
     this.resize();
     this.applyQuality();
 
@@ -290,7 +306,12 @@ class App {
   }
 
   resize() {
-    const w = window.innerWidth, h = window.innerHeight;
+    // Measure the app box, not the window: when embedded the frame's height is
+    // derived from our layout and the two do not agree until the host catches up.
+    const host = document.getElementById('app');
+    const r = host?.getBoundingClientRect();
+    const w = Math.max(2, Math.round(r?.width || window.innerWidth));
+    const h = Math.max(2, Math.round(r?.height || window.innerHeight));
     this.renderer.setSize(w, h, false);
     const dpr = this.renderer.getPixelRatio();
     this._ensureTargets(Math.floor(w * dpr), Math.floor(h * dpr));

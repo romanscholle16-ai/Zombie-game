@@ -19,6 +19,18 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
 body{cursor:default}
 body.playing{cursor:none}
 #app{position:fixed;inset:0}
+
+/* ---- embedded in a frame -------------------------------------------------
+   An artifact host sizes its frame from the page's scrollHeight. Everything
+   here is position:fixed, which contributes nothing to that, so the frame
+   collapses to its default height and the game renders into a sliver. When
+   embedded the app becomes an in-flow block with a definite height instead.
+   The height comes from the width via aspect-ratio — using vh would be
+   circular, since the frame's height is what we are trying to report. */
+html.embedded,body.embedded{height:auto;overflow:hidden}
+body.embedded #app{position:relative;inset:auto;width:100%;
+  aspect-ratio:16/9;min-height:420px;max-height:none;overflow:hidden}
+body.embedded .rotate-prompt{position:absolute}
 #gl{position:absolute;inset:0;width:100%;height:100%;display:block}
 .layer{position:absolute;inset:0;pointer-events:none}
 .hidden{display:none !important}
